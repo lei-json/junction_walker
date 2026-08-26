@@ -1,0 +1,33 @@
+[project]
+name = "junction_walker"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "cython>=3.2.9",
+    "easydict>=1.13",
+    "h5py>=3.16.0",
+    "kornia>=0.8.3",
+    "matplotlib==3.10.0",
+    "numpy==2.2.2",
+    "opencv-python>=5.0.0.93",
+    "pandas==2.2.3",
+    "pycolmap>=4.1.1",
+    "python-json-logger>=4.2.0",
+    "scikit-image>=0.26.0",
+    "scikit-learn==1.6.1",
+    "seaborn>=0.13.2",
+    "shapely>=2.1.2",
+    "torch==2.6.0",
+    "torchvision>=0.21.0",
+    "tqdm==4.66.5",
+    "xgboost>=3.3.0",
+    "yacs>=0.1.8",
+    "cv>=1.0.0",
+    "pillow>=12.1.0",
+    "scipy>=1.17.0",
+    "skeletonize>=2.8",
+    "pymupdf>=1.28.2",
+    "openpyxl>=3.1.5",
+]

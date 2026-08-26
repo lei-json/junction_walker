@@ -38,11 +38,11 @@ DEFAULT_HORIZONTAL_MIN_STEPS = 10
 
 
 # ------------------------------------------------------------
-# Greedy seed selection
+# Intersection point selection
 # ------------------------------------------------------------
 
-DEFAULT_SEED_COUNT_THRESHOLD = 3
-DEFAULT_SEED_SUPPRESSION = 7.0
+DEFAULT_INTERSECTION_COUNT_THRESHOLD = 3
+DEFAULT_INTERSECTION_SUPPRESSION = 7.0
 
 
 # ------------------------------------------------------------
@@ -118,6 +118,11 @@ def make_edge_mask(
     gray,
     threshold,
 ):
+    """
+    Convert a grayscale image into a binary edge mask.
+
+    Pixels darker than the threshold are treated as edges.
+    """
 
     return (
         gray < threshold
@@ -129,6 +134,9 @@ def make_edge_mask(
 # ============================================================
 
 def cleanup_edge_mask(mask):
+    """
+    Remove connected components smaller than 3 pixels.
+    """
 
     (
         num_labels,
@@ -378,30 +386,46 @@ def save_random_debug_outputs(
 
 
 # ============================================================
-# GREEDY SEED GENERATION
+# INTERSECTION POINT GENERATION
 # ============================================================
 
-def generate_greedy_seeds(
+def generate_intersection_points(
     intersection_counts,
     min_count,
     suppression_distance,
 ):
     """
-    Generate greedy seed locations from accumulated random
-    walker intersection counts.
+    Generate representative intersection points from the
+    accumulated random-walker intersection counts.
 
     Candidates are sorted by intersection frequency.
     Stronger candidates are selected first, and nearby
     candidates are suppressed.
+
+    Returns:
+
+        numpy array with shape (N, 2)
+
+    Coordinates are stored as:
+
+        (x, y)
     """
 
     heatmap = intersection_counts.astype(
         np.float32
     )
 
+    # --------------------------------------------------------
+    # Find candidate pixels
+    # --------------------------------------------------------
+
     candidates = np.argwhere(
         heatmap >= min_count
     )
+
+    # --------------------------------------------------------
+    # Sort strongest intersections first
+    # --------------------------------------------------------
 
     candidates = sorted(
         candidates,
@@ -412,16 +436,20 @@ def generate_greedy_seeds(
         reverse=True,
     )
 
-    seeds = []
+    intersection_points = []
+
+    # --------------------------------------------------------
+    # Non-maximum suppression
+    # --------------------------------------------------------
 
     for y, x in candidates:
 
         keep = True
 
-        for sx, sy in seeds:
+        for px, py in intersection_points:
 
-            dx = x - sx
-            dy = y - sy
+            dx = x - px
+            dy = y - py
 
             distance = np.sqrt(
                 dx ** 2
@@ -435,38 +463,48 @@ def generate_greedy_seeds(
 
         if keep:
 
-            seeds.append(
+            intersection_points.append(
                 (
                     int(x),
                     int(y),
                 )
             )
 
-    if not seeds:
+    # --------------------------------------------------------
+    # No points
+    # --------------------------------------------------------
+
+    if not intersection_points:
 
         return np.empty(
             (0, 2),
             dtype=np.int32,
         )
 
+    # --------------------------------------------------------
+    # Return
+    # --------------------------------------------------------
+
     return np.asarray(
-        seeds,
+        intersection_points,
         dtype=np.int32,
     )
 
 
 # ============================================================
-# SAVE SEED OVERLAY
+# SAVE INTERSECTION OVERLAY
 # ============================================================
 
-def save_seed_overlay(
+def save_intersection_overlay(
     gray,
-    seeds,
+    intersection_points,
     output,
 ):
     """
-    Save the original grayscale image with greedy seed
-    locations drawn on top.
+    Save the original grayscale image with detected
+    intersection points drawn on top.
+
+    Intersection points are shown as red circles.
     """
 
     image = cv2.cvtColor(
@@ -474,7 +512,7 @@ def save_seed_overlay(
         cv2.COLOR_GRAY2BGR,
     )
 
-    for x, y in seeds:
+    for x, y in intersection_points:
 
         cv2.circle(
             image,
@@ -507,7 +545,8 @@ def save_seed_overlay(
     if not success:
 
         raise RuntimeError(
-            f"Failed to save overlay: {output}"
+            f"Failed to save intersection overlay: "
+            f"{output}"
         )
 
 
@@ -560,8 +599,8 @@ def parse_args():
 
     parser = argparse.ArgumentParser(
         description=(
-            "Run the wing reconstruction pipeline on "
-            "every image in an images directory."
+            "Run random walkers on every image in an "
+            "images directory and detect intersection points."
         ),
         formatter_class=(
             argparse.ArgumentDefaultsHelpFormatter
@@ -648,27 +687,27 @@ def parse_args():
     )
 
     # ========================================================
-    # GREEDY SEED SELECTION
+    # INTERSECTION POINT SELECTION
     # ========================================================
 
     parser.add_argument(
-        "--seed-count-threshold",
+        "--intersection-count-threshold",
         type=int,
-        default=DEFAULT_SEED_COUNT_THRESHOLD,
+        default=DEFAULT_INTERSECTION_COUNT_THRESHOLD,
         help=(
             "Minimum number of simulations in which an "
-            "intersection must occur before it can become "
-            "a greedy seed."
+            "intersection must occur before it is considered "
+            "an intersection point."
         ),
     )
 
     parser.add_argument(
-        "--seed-suppression",
+        "--intersection-suppression",
         type=float,
-        default=DEFAULT_SEED_SUPPRESSION,
+        default=DEFAULT_INTERSECTION_SUPPRESSION,
         help=(
             "Minimum Euclidean distance between selected "
-            "greedy seeds."
+            "intersection points."
         ),
     )
 
@@ -766,16 +805,18 @@ def validate_args(args):
             "--horizontal-min-steps must be >= 0"
         )
 
-    if args.seed_count_threshold < 1:
+    if args.intersection_count_threshold < 1:
 
         raise ValueError(
-            "--seed-count-threshold must be >= 1"
+            "--intersection-count-threshold "
+            "must be >= 1"
         )
 
-    if args.seed_suppression < 0:
+    if args.intersection_suppression < 0:
 
         raise ValueError(
-            "--seed-suppression must be >= 0"
+            "--intersection-suppression "
+            "must be >= 0"
         )
 
 
@@ -806,8 +847,7 @@ def process_image(
     image_path,
     heatmap_dir,
     counts_dir,
-    seeds_dir,
-    overlays_dir,
+    intersections_dir,
     debug_horizontal_dir,
     debug_vertical_dir,
     args,
@@ -820,8 +860,9 @@ def process_image(
         session_XX/
             heatmaps/<stem>.png
             counts/<stem>.npy
-            seeds/<stem>.npy
-            overlays/<stem>.png
+            intersections/
+                <stem>.npy
+                <stem>.png
 
             debug/
                 horizontal/<stem>.png
@@ -844,13 +885,13 @@ def process_image(
         / f"{stem}.npy"
     )
 
-    seeds_output = (
-        seeds_dir
+    intersection_points_output = (
+        intersections_dir
         / f"{stem}.npy"
     )
 
-    overlay_output = (
-        overlays_dir
+    intersection_overlay_output = (
+        intersections_dir
         / f"{stem}.png"
     )
 
@@ -1018,8 +1059,6 @@ def process_image(
 
     else:
 
-        # Normal mode returns only intersection_counts.
-
         intersection_counts = (
             random_result
         )
@@ -1054,43 +1093,48 @@ def process_image(
     )
 
     # ========================================================
-    # STAGE 2
-    # GREEDY SEED GENERATION
+    # GENERATE INTERSECTION POINTS
     # ========================================================
 
-    greedy_seeds = generate_greedy_seeds(
-        intersection_counts=(
-            intersection_counts
-        ),
+    intersection_points = (
+        generate_intersection_points(
+            intersection_counts=(
+                intersection_counts
+            ),
 
-        min_count=(
-            args.seed_count_threshold
-        ),
+            min_count=(
+                args.intersection_count_threshold
+            ),
 
-        suppression_distance=(
-            args.seed_suppression
-        ),
+            suppression_distance=(
+                args.intersection_suppression
+            ),
+        )
     )
 
     # ========================================================
-    # SAVE GREEDY SEEDS
+    # SAVE INTERSECTION POINTS
     # ========================================================
 
     np.save(
-        str(seeds_output),
-        greedy_seeds,
+        str(intersection_points_output),
+        intersection_points,
     )
 
     # ========================================================
-    # SAVE SEED OVERLAY
+    # SAVE INTERSECTION VISUALIZATION
     # ========================================================
 
-    save_seed_overlay(
+    save_intersection_overlay(
         gray=gray,
 
-        seeds=greedy_seeds,
+        intersection_points=(
+            intersection_points
+        ),
 
-        output=overlay_output,
+        output=(
+            intersection_overlay_output
+        ),
     )
 
 
@@ -1127,6 +1171,23 @@ def main():
     )
 
     # ========================================================
+    # FIND IMAGES
+    # ========================================================
+
+    images = find_images(
+        image_directory
+    )
+
+    if not images:
+
+        print(
+            f"No supported images found in "
+            f"{image_directory}"
+        )
+
+        return
+
+    # ========================================================
     # CREATE NEW SESSION
     # ========================================================
 
@@ -1152,14 +1213,9 @@ def main():
         / "counts"
     )
 
-    seeds_dir = (
+    intersections_dir = (
         session_dir
-        / "seeds"
-    )
-
-    overlays_dir = (
-        session_dir
-        / "overlays"
+        / "intersections"
     )
 
     # ========================================================
@@ -1192,12 +1248,7 @@ def main():
         exist_ok=True,
     )
 
-    seeds_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    overlays_dir.mkdir(
+    intersections_dir.mkdir(
         parents=True,
         exist_ok=True,
     )
@@ -1219,24 +1270,7 @@ def main():
         )
 
     # ========================================================
-    # FIND IMAGES
-    # ========================================================
-
-    images = find_images(
-        image_directory
-    )
-
-    if not images:
-
-        print(
-            f"No supported images found in "
-            f"{image_directory}"
-        )
-
-        return
-
-    # ========================================================
-    # SHUFFLE
+    # SHUFFLE IMAGES
     # ========================================================
 
     images = shuffle_images(
@@ -1264,10 +1298,24 @@ def main():
         f"Random state:     {args.random_state}"
     )
 
+    print(
+        f"Simulations:      {NUM_SIMULATIONS}"
+    )
+
+    print(
+        f"Intersection threshold: "
+        f"{args.intersection_count_threshold}"
+    )
+
+    print(
+        f"Intersection suppression: "
+        f"{args.intersection_suppression}"
+    )
+
     print()
 
     # ========================================================
-    # PROCESS
+    # PROCESS IMAGES
     # ========================================================
 
     for image_path in tqdm(
@@ -1287,12 +1335,8 @@ def main():
                 counts_dir
             ),
 
-            seeds_dir=(
-                seeds_dir
-            ),
-
-            overlays_dir=(
-                overlays_dir
+            intersections_dir=(
+                intersections_dir
             ),
 
             debug_horizontal_dir=(
@@ -1305,6 +1349,10 @@ def main():
 
             args=args,
         )
+
+    # ========================================================
+    # FINISHED
+    # ========================================================
 
     print()
 

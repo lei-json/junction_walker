@@ -22,7 +22,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 sys.path.append(str(Path(__file__).resolve().parent.parent / "walkers"))
 
-from cleaning import remove_body_remnants
+from cleaning import remove_body_remnants, extract_veins_tophat
 from topological_walker import TopologicalWalker
 
 
@@ -89,8 +89,15 @@ def process_single_wing(args_tuple):
     cleaned_img, body_mask, body_info = remove_body_remnants(raw_img)
     gray = cv2.cvtColor(cleaned_img, cv2.COLOR_BGR2GRAY) if cleaned_img.ndim == 3 else cleaned_img
 
-    # Step 2: Binarize veins
-    vein_mask = (gray < THRESHOLD_VEIN).astype(np.uint8)
+    # Step 2: Extract veins via Morphological Black Top-Hat
+    # Preserves fine 1D vein ridges even when faint or anti-aliased (<= 250)
+    bw_top, _ = extract_veins_tophat(
+        gray,
+        kernel_size=9,
+        ridge_threshold=10,
+        background_threshold=250,
+    )
+    vein_mask = (bw_top == 0).astype(np.uint8)
 
     # Step 3: Run TopologicalWalker
     tw = TopologicalWalker(vein_mask, min_component_size=3, spur_threshold=3)

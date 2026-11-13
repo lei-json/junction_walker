@@ -27,17 +27,16 @@ from topological_walker import TopologicalWalker
 
 
 def evaluate_all(
-    rot_dir="data/rotate",
-    bw_dir="data/blackwhite_rotate",
-    seed_dir="data/seeds",
+    wing_dir="data/cleaned_wings",
+    seed_dir="data/cleaned_seeds",
     checkpoint_path="training_output/best_model.pt",
-    output_csv="training_output/generalized_metrics.csv",
+    output_csv="training_output/cleaned_wings_evaluation.csv",
     tolerance=5.0,
+    threshold=0.40,
     limit=None,
 ):
     repo_root = Path(__file__).resolve().parents[2]
-    rot_dir = repo_root / rot_dir
-    bw_dir = repo_root / bw_dir
+    wing_dir = repo_root / wing_dir
     seed_dir = repo_root / seed_dir
     checkpoint_path = repo_root / checkpoint_path
     output_csv = repo_root / output_csv
@@ -51,13 +50,16 @@ def evaluate_all(
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
 
-    all_wings = sorted(list(rot_dir.glob("*.*")))
+    all_wings = sorted(list(wing_dir.glob("*.png")) + list(wing_dir.glob("*.jpeg")) + list(wing_dir.glob("*.jpg")))
+    # Filter out blackwhite masks if present in the same dir
+    all_wings = [p for p in all_wings if not p.stem.endswith("_blackwhite")]
     if limit is not None:
         all_wings = all_wings[:limit]
 
-    print(f"Evaluating {len(all_wings)} wings...")
+    print(f"Evaluating {len(all_wings)} cleaned wings against Topological Walker ground truth...")
 
     records = []
+    failing_wings = []
     t_start = time.perf_counter()
 
     for i, img_path in enumerate(all_wings, 1):
@@ -69,100 +71,97 @@ def evaluate_all(
         h, w = img.shape
         area_100k = (h * w) / 100000.0
 
-        # Look for GT seed
-        sf1 = seed_dir / f"{stem}.npy"
-        sf2 = seed_dir / f"{stem}_blackwhite.npy"
-        gt_seeds = None
-        if sf1.exists():
-            gt_seeds = np.load(str(sf1))
-        elif sf2.exists():
-            gt_seeds = np.load(str(sf2))
-
-        if gt_seeds is not None and gt_seeds.ndim == 1:
-            gt_seeds = gt_seeds.reshape(-1, 2)
+        # Load Topological Walker Ground Truth seed
+        sf = seed_dir / f"{stem}.npy"
+        if not sf.exists():
+            continue
+        topo_gt = np.load(str(sf))
+        if topo_gt.ndim == 1:
+            topo_gt = topo_gt.reshape(-1, 2)
 
         # UNet inference
         t0 = time.perf_counter()
-        prob_map, unet_peaks = predict_image(model, img, device, threshold=0.40, snap=True)
+        prob_map, unet_peaks = predict_image(model, img, device, threshold=threshold, snap=True)
         unet_time = time.perf_counter() - t0
 
-        # Topological Walker inference (on BW if available, else img < 220)
-        bw_cands = list(bw_dir.glob(f"{stem}*.*"))
-        if bw_cands:
-            bw_img = cv2.imread(str(bw_cands[0]), cv2.IMREAD_GRAYSCALE)
-            mask = (bw_img < 128).astype(np.uint8)
-        else:
-            mask = (img < 220).astype(np.uint8)
+        # Precision, Recall, F1 (Accuracy) comparing UNet against Topological Walker GT
+        p, r, f1 = evaluate_against_gt(unet_peaks, topo_gt, tolerance=tolerance)
 
-        t0 = time.perf_counter()
-        tw = TopologicalWalker(mask, min_component_size=3, spur_threshold=3)
-        topo_peaks = tw.find_junctions()
-        topo_time = time.perf_counter() - t0
-
-        # Agreement
-        agr_p, agr_r, agr_f1 = evaluate_against_gt(unet_peaks, topo_peaks, tolerance=tolerance)
+        count_diff = abs(len(unet_peaks) - len(topo_gt))
+        count_ratio = len(unet_peaks) / max(len(topo_gt), 1)
 
         rec = {
             "index": i,
             "filename": img_path.name,
+            "stem": stem,
             "height": h,
             "width": w,
             "unet_time_sec": unet_time,
-            "topo_time_sec": topo_time,
             "unet_count": len(unet_peaks),
-            "topo_count": len(topo_peaks),
-            "unet_density": len(unet_peaks) / area_100k,
-            "topo_density": len(topo_peaks) / area_100k,
-            "agreement_precision": agr_p,
-            "agreement_recall": agr_r,
-            "agreement_f1": agr_f1,
-            "has_gt": gt_seeds is not None,
-            "gt_count": len(gt_seeds) if gt_seeds is not None else np.nan,
-            "unet_gt_precision": np.nan,
-            "unet_gt_recall": np.nan,
-            "unet_gt_f1": np.nan,
-            "topo_gt_precision": np.nan,
-            "topo_gt_recall": np.nan,
-            "topo_gt_f1": np.nan,
+            "topo_gt_count": len(topo_gt),
+            "count_diff": count_diff,
+            "count_ratio": count_ratio,
+            "precision": p,
+            "recall": r,
+            "f1_accuracy": f1,
+            "passed_85": (f1 >= 0.85),
         }
 
-        if gt_seeds is not None:
-            up, ur, uf = evaluate_against_gt(unet_peaks, gt_seeds, tolerance=tolerance)
-            tp, tr, tf = evaluate_against_gt(topo_peaks, gt_seeds, tolerance=tolerance)
-            rec["unet_gt_precision"] = up
-            rec["unet_gt_recall"] = ur
-            rec["unet_gt_f1"] = uf
-            rec["topo_gt_precision"] = tp
-            rec["topo_gt_recall"] = tr
-            rec["topo_gt_f1"] = tf
-
         records.append(rec)
+        if f1 < 0.85:
+            failing_wings.append(rec)
+
         if i % 25 == 0 or i == len(all_wings):
-            print(f"[{i:03d}/{len(all_wings)}] {img_path.name:40s} | UNet: {len(unet_peaks):4d} | Topo: {len(topo_peaks):4d} | Agr F1: {agr_f1*100:.1f}%")
+            status_str = "PASS" if f1 >= 0.85 else "FAIL (<85%)"
+            print(f"[{i:03d}/{len(all_wings)}] {img_path.name:45s} | UNet: {len(unet_peaks):4d} | TopoGT: {len(topo_gt):4d} | F1: {f1*100:.2f}% [{status_str}]")
 
     df = pd.DataFrame(records)
     df.to_csv(output_csv, index=False)
     elapsed = time.perf_counter() - t_start
 
-    print("\n================ COMPLETED GENERALIZED EVALUATION ================")
-    print(f"Total Wings Evaluated: {len(df)}")
-    print(f"Total Time: {elapsed:.2f}s ({elapsed/60:.2f} min)")
-    print(f"Mean UNet runtime / wing: {df['unet_time_sec'].mean():.3f}s")
-    print(f"Mean Topo runtime / wing: {df['topo_time_sec'].mean():.3f}s")
-    print(f"Mean Spatial Agreement F1: {df['agreement_f1'].mean()*100:.2f}%")
+    print("\n" + "=" * 75)
+    print("                EVALUATION SUMMARY: UNET VS TOPOLOGICAL WALKER")
+    print("=" * 75)
+    print(f"Total Wings Evaluated:       {len(df)}")
+    print(f"Total Time:                  {elapsed:.2f}s ({elapsed/60:.2f} min)")
+    print(f"Mean UNet runtime / wing:    {df['unet_time_sec'].mean():.3f}s")
+    print(f"Mean Precision:              {df['precision'].mean()*100:.2f}%")
+    print(f"Mean Recall:                 {df['recall'].mean()*100:.2f}%")
+    print(f"Mean F1 (Accuracy):          {df['f1_accuracy'].mean()*100:.2f}%")
+    print(f"Median F1:                   {df['f1_accuracy'].median()*100:.2f}%")
+    print(f"Min F1:                      {df['f1_accuracy'].min()*100:.2f}%")
+    print(f"Max F1:                      {df['f1_accuracy'].max()*100:.2f}%")
+    
+    passed_count = int(df['passed_85'].sum())
+    passed_pct = float(passed_count / len(df) * 100) if len(df) > 0 else 0.0
+    print(f"Wings with Accuracy >= 85%:  {passed_count} / {len(df)} ({passed_pct:.2f}%)")
+    print(f"Wings with Accuracy < 85%:   {len(failing_wings)} / {len(df)}")
 
-    gt_df = df[df["has_gt"]]
-    if len(gt_df) > 0:
-        print(f"\nGround Truth Subsample (N={len(gt_df)} wings):")
-        print(f"  UNet Mean F1:  {gt_df['unet_gt_f1'].mean()*100:.2f}% (P: {gt_df['unet_gt_precision'].mean()*100:.2f}%, R: {gt_df['unet_gt_recall'].mean()*100:.2f}%)")
-        print(f"  Topo Mean F1:  {gt_df['topo_gt_f1'].mean()*100:.2f}% (P: {gt_df['topo_gt_precision'].mean()*100:.2f}%, R: {gt_df['topo_gt_recall'].mean()*100:.2f}%)")
+    if failing_wings:
+        print("\nFailing Wings (< 85% Accuracy):")
+        for fw in failing_wings:
+            print(f"  - {fw['filename']:45s} | F1: {fw['f1_accuracy']*100:.2f}% | UNet: {fw['unet_count']} vs TopoGT: {fw['topo_gt_count']}")
 
-    print(f"Saved full metrics table to: {output_csv}")
+    print(f"\nFull detailed metrics saved to: {output_csv}")
     return df
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--wing-dir", type=str, default="data/cleaned_wings")
+    parser.add_argument("--seed-dir", type=str, default="data/cleaned_seeds")
+    parser.add_argument("--checkpoint", type=str, default="training_output/best_model.pt")
+    parser.add_argument("--threshold", type=float, default=0.40)
+    parser.add_argument("--tolerance", type=float, default=5.0)
+    parser.add_argument("--output", type=str, default="training_output/cleaned_wings_evaluation.csv")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of wings to evaluate")
     args = parser.parse_args()
-    evaluate_all(limit=args.limit)
+    evaluate_all(
+        wing_dir=args.wing_dir,
+        seed_dir=args.seed_dir,
+        checkpoint_path=args.checkpoint,
+        output_csv=args.output,
+        threshold=args.threshold,
+        tolerance=args.tolerance,
+        limit=args.limit,
+    )

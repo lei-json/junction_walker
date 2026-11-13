@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -104,13 +105,25 @@ class Intersection:
         )
 
         # ----------------------------------------------------
-        # Exact pixel intersection
+        # Exact + 8-connected diagonal line crossings
         # ----------------------------------------------------
 
-        intersections = (
+        strict_cross = (
             vertical_mask
             & horizontal_mask
         )
+
+        v_u8 = vertical_mask.astype(np.uint8)
+        h_u8 = horizontal_mask.astype(np.uint8)
+        cross_kernel = np.array(
+            [[0, 1, 0],
+             [1, 1, 1],
+             [0, 1, 0]],
+            dtype=np.uint8,
+        )
+        diag_cross = cv2.dilate(v_u8, cross_kernel) & h_u8
+
+        intersections = strict_cross | (diag_cross > 0)
 
         return intersections
 

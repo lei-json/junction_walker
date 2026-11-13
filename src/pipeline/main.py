@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from pipeline.random_stage import run_random_stage
 from walkers.intersection.intersection import Intersection
+from walkers.topological_walker import TopologicalWalker
 
 
 # ============================================================
@@ -27,22 +28,22 @@ DEFAULT_EDGE_THRESHOLD = 80
 DEFAULT_VERTICAL_WALKERS = 10000
 DEFAULT_HORIZONTAL_WALKERS = 10000
 
-DEFAULT_VERTICAL_CONSUME_SIDE = 5
-DEFAULT_HORIZONTAL_CONSUME_SIDE = 5
+DEFAULT_VERTICAL_CONSUME_SIDE = 1
+DEFAULT_HORIZONTAL_CONSUME_SIDE = 1
 
-DEFAULT_VERTICAL_MAX_DRIFT = 10
-DEFAULT_HORIZONTAL_MAX_DRIFT = 10
+DEFAULT_VERTICAL_MAX_DRIFT = 50
+DEFAULT_HORIZONTAL_MAX_DRIFT = 50
 
-DEFAULT_VERTICAL_MIN_STEPS = 10
-DEFAULT_HORIZONTAL_MIN_STEPS = 10
+DEFAULT_VERTICAL_MIN_STEPS = 5
+DEFAULT_HORIZONTAL_MIN_STEPS = 5
 
 
 # ------------------------------------------------------------
 # Intersection point selection
 # ------------------------------------------------------------
 
-DEFAULT_INTERSECTION_COUNT_THRESHOLD = 3
-DEFAULT_INTERSECTION_SUPPRESSION = 7.0
+DEFAULT_INTERSECTION_COUNT_THRESHOLD = 2
+DEFAULT_INTERSECTION_SUPPRESSION = 5.0
 
 
 # ------------------------------------------------------------
@@ -721,6 +722,14 @@ def parse_args():
         default=DEFAULT_RANDOM_STATE,
     )
 
+    parser.add_argument(
+        "--walker-mode",
+        type=str,
+        choices=["random", "topological"],
+        default="random",
+        help="Walker mode: 'random' for directional random walkers, 'topological' for omnidirectional skeleton walker.",
+    )
+
     # ========================================================
     # DEBUG
     # ========================================================
@@ -932,135 +941,168 @@ def process_image(
 
     # ========================================================
     # STAGE 1
-    # RANDOM WALKERS
+    # WALKERS (TOPOLOGICAL OR RANDOM)
     # ========================================================
 
-    random_result = run_random_stage(
-        edge_mask=edge_mask,
-
-        num_simulations=(
-            NUM_SIMULATIONS
-        ),
-
-        vertical_walkers=(
-            args.vertical_walkers
-        ),
-
-        horizontal_walkers=(
-            args.horizontal_walkers
-        ),
-
-        vertical_consume_side=(
-            args.vertical_consume_side
-        ),
-
-        horizontal_consume_side=(
-            args.horizontal_consume_side
-        ),
-
-        vertical_max_drift=(
-            args.vertical_max_drift
-        ),
-
-        horizontal_max_drift=(
-            args.horizontal_max_drift
-        ),
-
-        vertical_min_steps=(
-            args.vertical_min_steps
-        ),
-
-        horizontal_min_steps=(
-            args.horizontal_min_steps
-        ),
-
-        random_state=(
-            args.random_state
-        ),
-
-        debug=args.debug,
-    )
-
-    # ========================================================
-    # RANDOM WALKER DEBUG
-    # ========================================================
-
-    if args.debug:
-
-        if not isinstance(
-            random_result,
-            tuple,
-        ):
-
-            raise RuntimeError(
-                "Debug mode expected run_random_stage() "
-                "to return the debug tuple."
-            )
-
-        if len(random_result) != 7:
-
-            raise RuntimeError(
-                "Debug mode expected "
-                "run_random_stage() to return 7 values, "
-                f"but received {len(random_result)}."
-            )
-
-        (
-            intersection_counts,
-
-            horizontal_left_paths,
-            horizontal_right_paths,
-
-            vertical_up_paths,
-            vertical_down_paths,
-
-            horizontal_consumed_mask,
-            vertical_consumed_mask,
-
-        ) = random_result
-
-        save_random_debug_outputs(
-            gray=gray,
-
+    if args.walker_mode == "topological":
+        walker = TopologicalWalker(
             edge_mask=edge_mask,
-
-            horizontal_left_paths=(
-                horizontal_left_paths
-            ),
-
-            horizontal_right_paths=(
-                horizontal_right_paths
-            ),
-
-            vertical_up_paths=(
-                vertical_up_paths
-            ),
-
-            vertical_down_paths=(
-                vertical_down_paths
-            ),
-
-            horizontal_consumed_mask=(
-                horizontal_consumed_mask
-            ),
-
-            vertical_consumed_mask=(
-                vertical_consumed_mask
-            ),
-
-            horizontal_output=(
-                horizontal_debug_output
-            ),
-
-            vertical_output=(
-                vertical_debug_output
-            ),
+            min_component_size=3,
+            spur_threshold=3,
         )
+        intersection_points = walker.find_junctions()
+        intersection_counts = np.zeros(edge_mask.shape, dtype=np.uint32)
+        for px, py in intersection_points:
+            if 0 <= py < edge_mask.shape[0] and 0 <= px < edge_mask.shape[1]:
+                intersection_counts[py, px] = NUM_SIMULATIONS
 
     else:
+        random_result = run_random_stage(
+            edge_mask=edge_mask,
 
-        intersection_counts = (
-            random_result
+            num_simulations=(
+                NUM_SIMULATIONS
+            ),
+
+            vertical_walkers=(
+                args.vertical_walkers
+            ),
+
+            horizontal_walkers=(
+                args.horizontal_walkers
+            ),
+
+            vertical_consume_side=(
+                args.vertical_consume_side
+            ),
+
+            horizontal_consume_side=(
+                args.horizontal_consume_side
+            ),
+
+            vertical_max_drift=(
+                args.vertical_max_drift
+            ),
+
+            horizontal_max_drift=(
+                args.horizontal_max_drift
+            ),
+
+            vertical_min_steps=(
+                args.vertical_min_steps
+            ),
+
+            horizontal_min_steps=(
+                args.horizontal_min_steps
+            ),
+
+            random_state=(
+                args.random_state
+            ),
+
+            debug=args.debug,
+        )
+
+        # ====================================================
+        # RANDOM WALKER DEBUG
+        # ====================================================
+
+        if args.debug:
+
+            if not isinstance(
+                random_result,
+                tuple,
+            ):
+
+                raise RuntimeError(
+                    "Debug mode expected run_random_stage() "
+                    "to return the debug tuple."
+                )
+
+            if len(random_result) != 7:
+
+                raise RuntimeError(
+                    "Debug mode expected "
+                    "run_random_stage() to return 7 values, "
+                    f"but received {len(random_result)}."
+                )
+
+            (
+                intersection_counts,
+
+                horizontal_left_paths,
+                horizontal_right_paths,
+
+                vertical_up_paths,
+                vertical_down_paths,
+
+                horizontal_consumed_mask,
+                vertical_consumed_mask,
+
+            ) = random_result
+
+            save_random_debug_outputs(
+                gray=gray,
+
+                edge_mask=edge_mask,
+
+                horizontal_left_paths=(
+                    horizontal_left_paths
+                ),
+
+                horizontal_right_paths=(
+                    horizontal_right_paths
+                ),
+
+                vertical_up_paths=(
+                    vertical_up_paths
+                ),
+
+                vertical_down_paths=(
+                    vertical_down_paths
+                ),
+
+                horizontal_consumed_mask=(
+                    horizontal_consumed_mask
+                ),
+
+                vertical_consumed_mask=(
+                    vertical_consumed_mask
+                ),
+
+                horizontal_output=(
+                    horizontal_debug_output
+                ),
+
+                vertical_output=(
+                    vertical_debug_output
+                ),
+            )
+
+        else:
+
+            intersection_counts = (
+                random_result
+            )
+
+        # ====================================================
+        # GENERATE INTERSECTION POINTS
+        # ====================================================
+
+        intersection_points = (
+            generate_intersection_points(
+                intersection_counts=(
+                    intersection_counts
+                ),
+
+                min_count=(
+                    args.intersection_count_threshold
+                ),
+
+                suppression_distance=(
+                    args.intersection_suppression
+                ),
+            )
         )
 
     # ========================================================
@@ -1090,26 +1132,6 @@ def process_image(
         output=(
             heatmap_output
         ),
-    )
-
-    # ========================================================
-    # GENERATE INTERSECTION POINTS
-    # ========================================================
-
-    intersection_points = (
-        generate_intersection_points(
-            intersection_counts=(
-                intersection_counts
-            ),
-
-            min_count=(
-                args.intersection_count_threshold
-            ),
-
-            suppression_distance=(
-                args.intersection_suppression
-            ),
-        )
     )
 
     # ========================================================

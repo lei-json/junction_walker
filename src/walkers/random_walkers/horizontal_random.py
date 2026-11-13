@@ -9,8 +9,8 @@ class HorizontalRandom:
     consumption mask.
     """
 
-    def __init__(self, edge_mask, walkers=5000, consume_side=3,
-                 max_drift=1, min_steps=5, rng=None):
+    def __init__(self, edge_mask, walkers=10000, consume_side=1,
+                 max_drift=50, min_steps=5, rng=None):
         self.edge_mask = edge_mask.astype(bool, copy=False)
         self.walkers = int(walkers)
         self.consume_side = int(consume_side)

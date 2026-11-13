@@ -20,6 +20,8 @@ raw_data/
 processed_data/
 src/models/training_output
 src/models/prediction_output
+training_output/
+prediction_output/
 
 # Project data directory
 data/

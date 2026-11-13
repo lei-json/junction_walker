@@ -209,44 +209,65 @@ def train(
     output_dir=DEFAULT_OUTPUT_DIR,
     loss_type="focal",
     max_samples=None,
+    seeds_dir="data/cleaned_seeds",
+    image_dir="data/cleaned_wings",
+    workers=4,
+    checkpoint_path=None,
 ):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     device = get_device()
     print(f"Using device: {device}")
+    print(f"Dataset: seeds={seeds_dir}, images={image_dir}")
 
-    # Load dataset
-    full_dataset = JunctionDataset(
-        seeds_dir="data/seeds",
-        image_dir="data/rotate",
-        bw_dir="data/blackwhite_rotate",
+    # Build separate dataset objects for train (augment=True) and val (augment=False)
+    base_train = JunctionDataset(
+        seeds_dir=seeds_dir,
+        image_dir=image_dir,
         sigma=DEFAULT_SIGMA,
         augment=True,
         crop_size=(256, 256),
         max_samples=max_samples,
     )
+    base_val = JunctionDataset(
+        seeds_dir=seeds_dir,
+        image_dir=image_dir,
+        sigma=DEFAULT_SIGMA,
+        augment=False,
+        crop_size=(256, 256),
+        max_samples=max_samples,
+    )
 
-    total_len = len(full_dataset)
+    total_len = len(base_train)
     val_len = max(1, int(total_len * 0.2))
     train_len = total_len - val_len
 
-    torch.manual_seed(100)
-    train_ds, val_ds = random_split(full_dataset, [train_len, val_len])
-    # Disable augmentation on validation subset
-    val_ds.dataset.augment = False
+    # Reproducible index split
+    rng = np.random.default_rng(100)
+    shuffled_indices = rng.permutation(total_len).tolist()
+    train_indices = shuffled_indices[:train_len]
+    val_indices = shuffled_indices[train_len:]
+
+    from torch.utils.data import Subset
+    train_ds = Subset(base_train, train_indices)
+    val_ds = Subset(base_val, val_indices)
 
     train_loader = DataLoader(
-        train_ds, batch_size=batch_size, shuffle=True, drop_last=True
+        train_ds, batch_size=batch_size, shuffle=True, drop_last=True, num_workers=workers
     )
     val_loader = DataLoader(
-        val_ds, batch_size=batch_size, shuffle=False
+        val_ds, batch_size=batch_size, shuffle=False, num_workers=workers
     )
 
     print(f"Train samples: {train_len}, Validation samples: {val_len}")
 
     # Initialize model
     model = JunctionUNet(in_channels=1, out_channels=1, base_channels=16).to(device)
+    if checkpoint_path is not None and Path(checkpoint_path).exists():
+        print(f"Loading pretrained checkpoint from: {checkpoint_path}")
+        ckpt = torch.load(checkpoint_path, map_location=device)
+        model.load_state_dict(ckpt["model_state_dict"])
 
     # Loss & Optimizer
     if loss_type == "focal":
@@ -337,6 +358,10 @@ def parse_args():
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--loss", choices=["focal", "mse"], default="mse")
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--seeds-dir", type=str, default="data/cleaned_seeds")
+    parser.add_argument("--image-dir", type=str, default="data/cleaned_wings")
+    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--checkpoint", type=str, default=None)
     return parser.parse_args()
 
 
@@ -349,4 +374,8 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         loss_type=args.loss,
         max_samples=args.max_samples,
+        seeds_dir=args.seeds_dir,
+        image_dir=args.image_dir,
+        workers=args.workers,
+        checkpoint_path=args.checkpoint,
     )

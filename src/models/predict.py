@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
 import argparse
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 import random
+import sys
+import time
 
 import cv2
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial import cKDTree
 import torch
 import torch.nn.functional as F
-
-import sys
 
 try:
     from model import JunctionUNet
@@ -24,7 +27,13 @@ except ImportError:
 
 
 DEFAULT_MODEL = Path("training_output/best_model.pt")
+DEFAULT_INPUT = Path("data/cleaned_wings")
+DEFAULT_SEEDS_DIR = Path("data/cleaned_seeds")
+DEFAULT_COORDS_DIR = Path("data/unet_predictions")
 DEFAULT_OUTPUT_DIR = Path("prediction_output")
+DEFAULT_THRESHOLD = 0.40
+DEFAULT_DPI = 150
+DEFAULT_WORKERS = 6
 
 
 def get_device():
@@ -151,9 +160,11 @@ def evaluate_against_gt(pred_coords, gt_coords, tolerance=5.0):
     return precision, recall, f1
 
 
-def save_prediction_plot(
-    img, prob_map, pred_peaks, gt_peaks, output_path, metrics=None
-):
+def _plot_worker(task):
+    img, prob_map, pred_peaks, gt_peaks, output_path_str, metrics, dpi = task
+    output_path = Path(output_path_str)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
     # 1. Image with predicted junctions (red)
@@ -162,7 +173,7 @@ def save_prediction_plot(
         axes[0].scatter(
             pred_peaks[:, 0], pred_peaks[:, 1], c="red", s=10, marker="o", label=f"Predicted ({len(pred_peaks)})"
         )
-    axes[0].set_title("Input Wing + Predicted Junctions")
+    axes[0].set_title(f"Input Wing + Predicted Junctions ({len(pred_peaks)})")
     axes[0].axis("off")
     axes[0].legend(loc="lower right")
 
@@ -192,18 +203,29 @@ def save_prediction_plot(
     axes[2].legend(loc="lower right")
 
     plt.tight_layout()
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(str(output_path), dpi=200, bbox_inches="tight")
-    plt.close()
+    plt.savefig(str(output_path), dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    return str(output_path)
+
+
+def save_prediction_plot(
+    img, prob_map, pred_peaks, gt_peaks, output_path, metrics=None, dpi=DEFAULT_DPI
+):
+    _plot_worker((img, prob_map, pred_peaks, gt_peaks, str(output_path), metrics, dpi))
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run junction prediction on dragonfly wing images")
     parser.add_argument("--model", type=Path, default=DEFAULT_MODEL)
-    parser.add_argument("--input", type=Path, default=Path("data/rotate"))
+    parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--seeds-dir", type=Path, default=Path("data/seeds"))
-    parser.add_argument("--threshold", type=float, default=0.25)
+    parser.add_argument("--coords-dir", type=Path, default=DEFAULT_COORDS_DIR)
+    parser.add_argument("--seeds-dir", type=Path, default=DEFAULT_SEEDS_DIR)
+    parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
+    parser.add_argument("--dpi", type=int, default=DEFAULT_DPI)
+    parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
+    parser.add_argument("--no-plot", action="store_true", help="Skip saving visual prediction plots")
+    parser.add_argument("--no-coords", action="store_true", help="Skip saving coordinate .npy files")
     parser.add_argument("--sample-k", type=int, default=None, help="Sample k wings at random and evaluate")
     args = parser.parse_args()
 
@@ -217,6 +239,7 @@ def main():
         image_paths = sorted([
             p for p in args.input.iterdir()
             if p.suffix.lower() in [".png", ".jpg", ".jpeg"]
+            and not p.stem.endswith("_blackwhite")
         ])
 
     if args.sample_k is not None:
@@ -224,36 +247,76 @@ def main():
         image_paths = random.sample(image_paths, min(args.sample_k, len(image_paths)))
         print(f"Sampled {len(image_paths)} wings at random for verification.")
 
+    if not args.no_coords and args.coords_dir is not None:
+        args.coords_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Saving predicted coordinates (.npy) to: {args.coords_dir}")
+
+    if not args.no_plot and args.output_dir is not None:
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Saving visual overlay plots (.png) to: {args.output_dir}")
+
+    pool = ProcessPoolExecutor(max_workers=args.workers) if (not args.no_plot and args.workers > 1) else None
+    futures = []
+
     all_p, all_r, all_f1 = [], [], []
+    t_start = time.perf_counter()
 
-    for img_path in image_paths:
-        img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            continue
+    try:
+        for idx, img_path in enumerate(image_paths, 1):
+            img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+            if img is None:
+                continue
 
-        prob_map, pred_peaks = predict_image(model, img, device, threshold=args.threshold)
+            prob_map, pred_peaks = predict_image(model, img, device, threshold=args.threshold)
 
-        # Check for matching GT seeds
-        gt_seeds = None
-        metrics = None
-        seed_cand = args.seeds_dir / f"{img_path.stem}.npy"
-        if not seed_cand.exists():
-            seed_cand = args.seeds_dir / f"{img_path.stem}_blackwhite.npy"
+            # Step 1: Save predicted coordinates
+            if not args.no_coords and args.coords_dir is not None:
+                coord_file = args.coords_dir / f"{img_path.stem}.npy"
+                np.save(str(coord_file), pred_peaks)
 
-        if seed_cand.exists():
-            gt_seeds = np.load(str(seed_cand))
-            p, r, f = evaluate_against_gt(pred_peaks, gt_seeds, tolerance=5.0)
-            metrics = (p, r, f)
-            all_p.append(p)
-            all_r.append(r)
-            all_f1.append(f)
-            print(f"{img_path.name:45s} | Pred: {len(pred_peaks):4d} | GT: {len(gt_seeds):4d} | P: {p*100:.1f}% | R: {r*100:.1f}% | F1: {f*100:.1f}%")
-        else:
-            print(f"{img_path.name:45s} | Pred: {len(pred_peaks):4d} | No GT found")
+            # Check for matching GT seeds
+            gt_seeds = None
+            metrics = None
+            seed_cand = args.seeds_dir / f"{img_path.stem}.npy"
+            if not seed_cand.exists():
+                seed_cand = args.seeds_dir / f"{img_path.stem}_blackwhite.npy"
 
-        # Save plot
-        out_plot = args.output_dir / f"{img_path.stem}_prediction.png"
-        save_prediction_plot(img, prob_map, pred_peaks, gt_seeds, out_plot, metrics=metrics)
+            if seed_cand.exists():
+                gt_seeds = np.load(str(seed_cand))
+                if gt_seeds.ndim == 1:
+                    gt_seeds = gt_seeds.reshape(-1, 2)
+                p, r, f = evaluate_against_gt(pred_peaks, gt_seeds, tolerance=5.0)
+                metrics = (p, r, f)
+                all_p.append(p)
+                all_r.append(r)
+                all_f1.append(f)
+                if idx % 25 == 0 or idx == len(image_paths):
+                    print(f"[{idx:03d}/{len(image_paths)}] {img_path.name:45s} | Pred: {len(pred_peaks):4d} | GT: {len(gt_seeds):4d} | F1: {f*100:.2f}%")
+            else:
+                if idx % 25 == 0 or idx == len(image_paths):
+                    print(f"[{idx:03d}/{len(image_paths)}] {img_path.name:45s} | Pred: {len(pred_peaks):4d} | No GT found")
+
+            # Step 2: Save plot
+            if not args.no_plot and args.output_dir is not None:
+                out_plot = args.output_dir / f"{img_path.stem}_prediction.png"
+                task = (img, prob_map, pred_peaks, gt_seeds, str(out_plot), metrics, args.dpi)
+                if pool is not None:
+                    futures.append(pool.submit(_plot_worker, task))
+                else:
+                    _plot_worker(task)
+
+        if pool is not None:
+            print(f"\nProcessing {len(futures)} visual plots using {args.workers} background workers...")
+            for f in as_completed(futures):
+                f.result()
+            print("All visual prediction plots completed successfully.")
+
+    finally:
+        if pool is not None:
+            pool.shutdown(wait=True)
+
+    elapsed = time.perf_counter() - t_start
+    print(f"\nTotal elapsed time: {elapsed:.2f}s ({elapsed/60:.2f} min)")
 
     if all_f1:
         print("\n================ SUMMARY EVALUATION ================")
@@ -261,6 +324,7 @@ def main():
         print(f"Mean Precision:  {np.mean(all_p)*100:.2f}%")
         print(f"Mean Recall:     {np.mean(all_r)*100:.2f}%")
         print(f"Mean F1 Score:   {np.mean(all_f1)*100:.2f}%")
+        print(f"Median F1 Score: {np.median(all_f1)*100:.2f}%")
         print("====================================================")
 
 

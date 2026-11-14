@@ -3,11 +3,12 @@
 Publication Figure Generator for Unified Multi-Dataset Junction Benchmark.
 
 Generates:
-1. 4-Dataset Visual Comparison Panel:
-   Synthetic Dragonfly, Real PNAS Dragonfly, DRIVE Retinal Vasculature, HALVS Leaf Venation.
-   Shows raw image, ground-truth junctions, and UNet detections with matched localization.
+1. 5-Dataset Visual Comparison Panel:
+   Abstract Geometric Voronoi, Realistic Synthetic Dragonfly, Real PNAS Dragonfly,
+   DRIVE Retinal Vasculature, HALVS Leaf Venation.
+   Shows raw input, ground-truth junctions, and UNet detections with matched localization.
 2. Comparative Performance Charts:
-   F1-score across datasets, noise robustness curves, and localization error.
+   F1-score across all 5 benchmark dataset tiers and dual noise robustness curves.
 """
 
 from pathlib import Path
@@ -27,6 +28,7 @@ sys.path.insert(0, str(repo_root / "src/preprocessing"))
 sys.path.insert(0, str(repo_root / "src/benchmark"))
 
 from model import JunctionUNet
+from synthetic_ground_truth_benchmark import generate_synthetic_wing_venation
 from dragonfly_synthetic_generator import generate_realistic_dragonfly_wing
 from external_datasets_loader import (
     load_pnas_dragonfly_benchmark,
@@ -51,35 +53,43 @@ def plot_visual_4panel_comparison(
     unet.load_state_dict(ckpt["model_state_dict"])
     unet.eval()
 
-    # 1. Synthetic
+    # 1. Abstract Geometric Voronoi
+    v_full, v_gt_full = generate_synthetic_wing_venation(
+        width=800, height=450, n_seeds=130, noise_sigma=2.0, seed=42
+    )
+    v_crop = v_full[100:300, 250:550]
+    v_valid = (v_gt_full[:, 0] >= 250) & (v_gt_full[:, 0] < 550) & (v_gt_full[:, 1] >= 100) & (v_gt_full[:, 1] < 300)
+    v_gt = v_gt_full[v_valid] - np.array([250, 100], dtype=np.float32)
+
+    # 2. Realistic Synthetic Dragonfly
     synth_img, synth_gt, _ = generate_realistic_dragonfly_wing(
         width=800, height=360, wing_type="hindwing", noise_sigma=2.0, seed=123
     )
-    # Crop representative mid-wing window
     s_crop = synth_img[100:300, 300:600]
     s_valid = (synth_gt[:, 0] >= 300) & (synth_gt[:, 0] < 600) & (synth_gt[:, 1] >= 100) & (synth_gt[:, 1] < 300)
     s_gt = synth_gt[s_valid] - np.array([300, 100], dtype=np.float32)
 
-    # 2. PNAS Real Dragonfly
+    # 3. PNAS Real Dragonfly
     p_crop, p_gt, _ = load_pnas_dragonfly_benchmark(crop_box=(450, 650, 1100, 1400))
 
-    # 3. DRIVE Retina
+    # 4. DRIVE Retina
     d_full, d_gt, _ = load_drive_retina_benchmark(index=1)
     d_crop = d_full[180:380, 180:480]
     d_valid = (d_gt[:, 0] >= 180) & (d_gt[:, 0] < 480) & (d_gt[:, 1] >= 180) & (d_gt[:, 1] < 380)
     d_gt_crop = d_gt[d_valid] - np.array([180, 180], dtype=np.float32)
 
-    # 4. HALVS Leaf
+    # 5. HALVS Leaf
     l_crop, l_gt, _ = load_halvs_leaf_benchmark(crop_box=(700, 900, 500, 800))
 
     datasets = [
+        ("Abstract Geometric Voronoi", v_crop, v_gt),
         ("Realistic Synthetic Dragonfly", s_crop, s_gt),
         ("Real Dragonfly (PNAS 2018)", p_crop, p_gt),
         ("Retinal Vasculature (DRIVE)", d_crop, d_gt_crop),
         ("Leaf Venation (HALVS)", l_crop, l_gt),
     ]
 
-    fig, axes = plt.subplots(4, 3, figsize=(14, 15))
+    fig, axes = plt.subplots(5, 3, figsize=(14, 18.5))
     tol = 5.0
 
     for row_idx, (title, img, gt) in enumerate(datasets):
@@ -116,7 +126,6 @@ def plot_visual_4panel_comparison(
         # Column 2: UNet Prediction Overlay
         axes[row_idx, 2].imshow(img, cmap="gray")
         if len(preds) > 0:
-            # TP green, FP red
             tp_pts = preds[tp_pred]
             fp_pts = preds[~tp_pred]
             if len(tp_pts) > 0:
@@ -129,8 +138,11 @@ def plot_visual_4panel_comparison(
 
     plt.tight_layout()
     plt.savefig(out_file, dpi=300, bbox_inches="tight")
+    # Also save with 5panel name
+    p5_out = out_file.parent / "unified_benchmark_5panel_visual.png"
+    plt.savefig(p5_out, dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"Saved 4-panel visual comparison to: {out_file}")
+    print(f"Saved visual comparison panel to: {out_file} and {p5_out}")
 
 
 def plot_summary_charts(
@@ -146,16 +158,21 @@ def plot_summary_charts(
     out_file = repo_root / output_path
     out_file.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig = plt.figure(figsize=(22, 6.5))
+    gs = fig.add_gridspec(1, 3, width_ratios=[1.7, 1.0, 1.0])
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1])
+    ax3 = fig.add_subplot(gs[2])
 
     # 1. Bar Chart: F1@5px across distinct datasets
-    # Filter to main representative conditions:
-    # Synthetic sigma_2, PNAS real_specimen, DRIVE clinical_fundus, HALVS real_cleared_leaf
     target_conditions = [
-        ("Realistic Synthetic (Clean)", "Realistic Synthetic Dragonfly", "sigma_2"),
-        ("Realistic Synthetic (Noisy)", "Realistic Synthetic Dragonfly", "sigma_20"),
-        ("Real Dragonfly (PNAS)", "PNAS Dragonfly Wing", "real_specimen"),
-        ("Retinal Vessels (DRIVE)", "DRIVE Retinal Vasculature", "clinical_fundus"),
+        ("Abstract Voronoi\n(Clean σ=2)", "Abstract Geometric Voronoi", "sigma_2"),
+        ("Abstract Voronoi\n(Noisy σ=20)", "Abstract Geometric Voronoi", "sigma_20"),
+        ("Realistic Synth\n(Clean σ=2)", "Realistic Synthetic Dragonfly", "sigma_2"),
+        ("Realistic Synth\n(Noisy σ=20)", "Realistic Synthetic Dragonfly", "sigma_20"),
+        ("Real Dragonfly\n(PNAS 2018)", "PNAS Dragonfly Wing", "real_specimen"),
+        ("Retinal Vessels\n(DRIVE)", "DRIVE Retinal Vasculature", "clinical_fundus"),
+        ("Leaf Venation\n(HALVS)", "HALVS Leaf Venation", "real_cleared_leaf"),
     ]
 
     methods_order = [
@@ -189,18 +206,39 @@ def plot_summary_charts(
         offset = (i - len(methods_order) / 2) * width + width / 2
         rects = ax1.bar(x + offset, vals, width, label=m_name, color=colors[i % len(colors)], alpha=0.9, edgecolor="black", linewidth=0.5)
 
-    ax1.set_ylabel("F1-Score at 5px Tolerance (%)", fontsize=12, fontweight="bold")
-    ax1.set_title("Cross-Dataset Junction F1-Score Comparison", fontsize=13, fontweight="bold")
+    ax1.set_ylabel("F1-Score at 5px Tolerance (%)", fontsize=11, fontweight="bold")
+    ax1.set_title("Cross-Dataset Junction F1-Score Comparison", fontsize=12, fontweight="bold")
     ax1.set_xticks(x)
-    ax1.set_xticklabels(labels, fontsize=10, fontweight="bold")
+    ax1.set_xticklabels(labels, fontsize=9, fontweight="bold")
     ax1.set_ylim(0, 105)
     ax1.grid(axis="y", linestyle="--", alpha=0.5)
-    ax1.legend(loc="upper right", fontsize=9, framealpha=0.9)
+    ax1.legend(loc="upper right", fontsize=8.5, framealpha=0.9)
 
-    # 2. Noise Robustness Sweep on Realistic Synthetic Dragonfly Wing
-    synth_sub = df[df["dataset"] == "Realistic Synthetic Dragonfly"]
+    # 2. Noise Robustness on Abstract Geometric Voronoi
+    v_sub = df[df["dataset"] == "Abstract Geometric Voronoi"]
     noise_sigmas = [2.0, 10.0, 20.0]
-    cond_map = {"sigma_2": 2.0, "sigma_10": 10.0, "sigma_20": 20.0}
+
+    for i, m_name in enumerate(methods_order):
+        m_rows = v_sub[v_sub["method"] == m_name]
+        f1_vals = []
+        for c in ["sigma_2", "sigma_10", "sigma_20"]:
+            val = m_rows[m_rows["condition"] == c]["f1_5px"].values
+            f1_vals.append(val[0] * 100.0 if len(val) > 0 else 0.0)
+
+        marker = "o" if "UNet" in m_name else ("s" if "Topological" in m_name else "^")
+        lw = 2.5 if "UNet" in m_name or "Topological" in m_name else 1.5
+        ax2.plot(noise_sigmas, f1_vals, label=m_name, marker=marker, linewidth=lw, color=colors[i % len(colors)], markersize=5.5)
+
+    ax2.set_xlabel("Noise Std Dev (σ)", fontsize=11, fontweight="bold")
+    ax2.set_ylabel("F1 @ 5px (%)", fontsize=11, fontweight="bold")
+    ax2.set_title("Abstract Geometric Voronoi Noise Response", fontsize=12, fontweight="bold")
+    ax2.set_xticks(noise_sigmas)
+    ax2.set_xticklabels(["σ = 2", "σ = 10", "σ = 20"], fontsize=9.5)
+    ax2.set_ylim(0, 105)
+    ax2.grid(True, linestyle="--", alpha=0.5)
+
+    # 3. Noise Robustness on Realistic Synthetic Dragonfly Wing
+    synth_sub = df[df["dataset"] == "Realistic Synthetic Dragonfly"]
 
     for i, m_name in enumerate(methods_order):
         m_rows = synth_sub[synth_sub["method"] == m_name]
@@ -211,16 +249,15 @@ def plot_summary_charts(
 
         marker = "o" if "UNet" in m_name else ("s" if "Topological" in m_name else "^")
         lw = 2.5 if "UNet" in m_name or "Topological" in m_name else 1.5
-        ax2.plot(noise_sigmas, f1_vals, label=m_name, marker=marker, linewidth=lw, color=colors[i % len(colors)], markersize=6)
+        ax3.plot(noise_sigmas, f1_vals, label=m_name, marker=marker, linewidth=lw, color=colors[i % len(colors)], markersize=5.5)
 
-    ax2.set_xlabel("Additive Sensor Noise Standard Deviation (sigma)", fontsize=12, fontweight="bold")
-    ax2.set_ylabel("F1-Score at 5px Tolerance (%)", fontsize=12, fontweight="bold")
-    ax2.set_title("Sensor Noise Robustness (Analytical Ground Truth)", fontsize=13, fontweight="bold")
-    ax2.set_xticks(noise_sigmas)
-    ax2.set_xticklabels(["sigma = 2 (Clean)", "sigma = 10 (Moderate)", "sigma = 20 (Severe)"], fontsize=10)
-    ax2.set_ylim(0, 105)
-    ax2.grid(True, linestyle="--", alpha=0.5)
-    ax2.legend(loc="lower left", fontsize=9, framealpha=0.9)
+    ax3.set_xlabel("Noise Std Dev (σ)", fontsize=11, fontweight="bold")
+    ax3.set_ylabel("F1 @ 5px (%)", fontsize=11, fontweight="bold")
+    ax3.set_title("Realistic Dragonfly Synthetic Noise Response", fontsize=12, fontweight="bold")
+    ax3.set_xticks(noise_sigmas)
+    ax3.set_xticklabels(["σ = 2", "σ = 10", "σ = 20"], fontsize=9.5)
+    ax3.set_ylim(0, 105)
+    ax3.grid(True, linestyle="--", alpha=0.5)
 
     plt.tight_layout()
     plt.savefig(out_file, dpi=300, bbox_inches="tight")

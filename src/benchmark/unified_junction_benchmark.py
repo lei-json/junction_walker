@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 """
-Comprehensive Benchmark Suite for JunctionUNet and Baseline Detectors.
+Comprehensive Unified Benchmark Suite for JunctionUNet and Baseline Detectors.
 
-Evaluates JunctionUNet across:
-1. Realistic Dragonfly-Grade Synthetic Benchmark:
+Unified multi-tier evaluation hierarchy:
+1. Tier 1: Abstract Geometric Planar Graph (Basic Voronoi Venation):
+   - Uniform-width planar graph lattice with analytical mathematical ground truth
+   - Noise sweeps: Clean (sigma=2), Moderate (sigma=10), Heavy Noise (sigma=20)
+2. Tier 2: Realistic Dragonfly-Grade Synthetic Benchmark:
    - Parametric wing silhouettes with decaying primary splines (11px -> 3.5px)
-   - Anisotropic Voronoi crossveins (Sx/Sy = 2.0)
-   - Exact analytical ground truth (mathematical intersections and Voronoi graph nodes)
-   - Noise sweeps: Clean (sigma=2), Moderate (sigma=10), Noisy (sigma=20)
-2. External Real Dragonfly Venation Benchmark (Hoffmann et al., PNAS 2018):
+   - Anisotropic Voronoi crossveins (Sx/Sy = 2.0), nodus, and pterostigma
+   - Exact analytical closed-form intersections and Voronoi graph nodes
+   - Noise sweeps: Clean (sigma=2), Moderate (sigma=10), Heavy Noise (sigma=20)
+3. Tier 3: External Real Dragonfly Venation Benchmark (Hoffmann et al., PNAS 2018):
    - Real photographic dragonfly wings with 9,586 biological cell junctions
    - Multi-region evaluation (Center, Apex, Nodus, Anal Base)
-3. External Real Retinal Vasculature Benchmark (DRIVE):
-   - 5 clinical fundus photographs with dual-observer expert manual ground truth
-4. External Real Leaf Venation Benchmark (HALVS):
+4. Tier 4: External Real Retinal Vasculature Benchmark (DRIVE):
+   - Clinical fundus photographs with dual-observer expert manual ground truth
+5. Tier 5: External Real Leaf Venation Benchmark (HALVS):
    - Real plant leaf specimens with hierarchical vascular ground truth
 
-NO biological feature extraction is performed. Focuses exclusively on:
-- Precision, Recall, F1 at 3px, 5px, 8px
-- Mean Localization Error (MLE)
-- Detection Latency (ms)
+Evaluates all 7 detectors:
+- Harris Corner
+- Shi-Tomasi
+- FAST
+- SIFT
+- Classical Skeleton
+- TopologicalWalker
+- JunctionUNet (Raw)
 """
 
 import argparse
@@ -53,6 +60,7 @@ from baselines import (
     detect_unet_raw,
     evaluate_predictions_multi_tolerance,
 )
+from synthetic_ground_truth_benchmark import generate_synthetic_wing_venation
 from dragonfly_synthetic_generator import generate_realistic_dragonfly_wing
 from external_datasets_loader import (
     load_pnas_dragonfly_benchmark,
@@ -204,10 +212,35 @@ def run_unified_benchmark(
     all_records = []
 
     # =========================================================================
-    # 1. REALISTIC DRAGONFLY-GRADE SYNTHETIC BENCHMARK
+    # 1. ABSTRACT GEOMETRIC PLANAR GRAPH (Basic Voronoi Venation)
     # =========================================================================
-    print("\n--- Benchmark 1: Realistic Dragonfly-Grade Synthetic Wing Benchmark ---")
+    print("\n--- Benchmark 1: Abstract Geometric Planar Graph (Basic Voronoi Venation) ---")
     noise_levels = [2.0, 10.0, 20.0]
+    for noise in noise_levels:
+        cond_label = f"sigma_{int(noise)}"
+        for trial in range(n_synthetic_trials):
+            seed = 1000 + int(noise * 10) + trial
+            img_v, gt_v = generate_synthetic_wing_venation(
+                width=800,
+                height=450,
+                n_seeds=130,
+                vein_thickness=3,
+                noise_sigma=noise,
+                seed=seed,
+            )
+            recs = run_benchmark_on_sample(
+                img_v, gt_v, methods,
+                dataset_name="Abstract Geometric Voronoi",
+                sample_id=f"voronoi_trial{trial}",
+                condition=cond_label,
+            )
+            all_records.extend(recs)
+            print(f"  [Voronoi {cond_label} trial {trial+1}/{n_synthetic_trials}] GT={len(gt_v)} evaluated.")
+
+    # =========================================================================
+    # 2. REALISTIC DRAGONFLY-GRADE SYNTHETIC BENCHMARK
+    # =========================================================================
+    print("\n--- Benchmark 2: Realistic Dragonfly-Grade Synthetic Wing Benchmark ---")
     for noise in noise_levels:
         cond_label = f"sigma_{int(noise)}"
         for trial in range(n_synthetic_trials):
@@ -231,9 +264,9 @@ def run_unified_benchmark(
             print(f"  [Synthetic {cond_label} trial {trial+1}/{n_synthetic_trials}] {w_type} GT={len(gt)} evaluated.")
 
     # =========================================================================
-    # 2. REAL DRAGONFLY WING BENCHMARK (Hoffmann et al., PNAS 2018)
+    # 3. REAL DRAGONFLY WING BENCHMARK (Hoffmann et al., PNAS 2018)
     # =========================================================================
-    print("\n--- Benchmark 2: Real Dragonfly Wing Venation (Hoffmann et al., PNAS) ---")
+    print("\n--- Benchmark 3: Real Dragonfly Wing Venation (Hoffmann et al., PNAS) ---")
     pnas_regions = [
         ("Center Wing", (400, 800, 1000, 1600)),
         ("Wing Apex", (300, 700, 2000, 2600)),
@@ -252,9 +285,9 @@ def run_unified_benchmark(
         print(f"  [PNAS {reg_name}] GT={len(gt_p)} evaluated.")
 
     # =========================================================================
-    # 3. REAL RETINAL VASCULATURE BENCHMARK (DRIVE)
+    # 4. REAL RETINAL VASCULATURE BENCHMARK (DRIVE)
     # =========================================================================
-    print("\n--- Benchmark 3: Real Retinal Vasculature (DRIVE Clinical Fundus) ---")
+    print("\n--- Benchmark 4: Real Retinal Vasculature (DRIVE Clinical Fundus) ---")
     for i in range(1, 6):
         img_d, gt_d, meta_d = load_drive_retina_benchmark(index=i)
         recs = run_benchmark_on_sample(
@@ -267,9 +300,9 @@ def run_unified_benchmark(
         print(f"  [DRIVE Fundus {i:02d}] GT={len(gt_d)} evaluated.")
 
     # =========================================================================
-    # 4. REAL LEAF VENATION BENCHMARK (HALVS)
+    # 5. REAL LEAF VENATION BENCHMARK (HALVS)
     # =========================================================================
-    print("\n--- Benchmark 4: Real Leaf Venation (HALVS Plant Science) ---")
+    print("\n--- Benchmark 5: Real Leaf Venation (HALVS Plant Science) ---")
     leaf_regions = [
         ("Midrib & Secondary Veins", (600, 1200, 400, 1000)),
         ("Laminar Crossvein Network", (1400, 2000, 500, 1100)),
@@ -291,11 +324,29 @@ def run_unified_benchmark(
     df.to_csv(csv_path, index=False)
     print(f"\nDetailed per-sample benchmark results written to: {csv_path}")
 
-    # Summary table per dataset & method
+    # Also sync synthetic_ground_truth_benchmark.csv for the Voronoi subset
+    voronoi_sub = df[df["dataset"] == "Abstract Geometric Voronoi"].copy()
+    if len(voronoi_sub) > 0:
+        voronoi_csv_path = out_p / "synthetic_ground_truth_benchmark.csv"
+        voronoi_sub["trial"] = voronoi_sub["sample_id"].apply(lambda s: int(s.replace("voronoi_trial", "")))
+        voronoi_sub["noise_sigma"] = voronoi_sub["condition"].apply(lambda c: float(c.replace("sigma_", "")))
+        voronoi_cols = [
+            "trial", "noise_sigma", "method", "gt_count", "pred_count", "latency_ms",
+            "p_3px", "r_3px", "f1_3px", "p_5px", "r_5px", "f1_5px", "p_8px", "r_8px", "f1_8px", "mean_loc_error_px"
+        ]
+        voronoi_sub[voronoi_cols].to_csv(voronoi_csv_path, index=False)
+        print(f"Synchronized analytical Voronoi benchmark CSV: {voronoi_csv_path}")
+
+    # Summary table per dataset & condition & method
     summary = df.groupby(["dataset", "condition", "method"]).agg({
+        "p_3px": "mean",
+        "r_3px": "mean",
+        "f1_3px": "mean",
         "p_5px": "mean",
         "r_5px": "mean",
         "f1_5px": "mean",
+        "p_8px": "mean",
+        "r_8px": "mean",
         "f1_8px": "mean",
         "mean_loc_error_px": "mean",
         "latency_ms": "mean",

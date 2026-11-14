@@ -24,7 +24,7 @@ The junction nodes of this venation network—where structural longitudinal vein
 
 ---
 
-## 2. What the Project Is Now: Final Scope & Deliverables
+## 2. Project Scope & Core Deliverables
 
 OdonataNet provides an end-to-end computational framework and curated benchmark for deep learning-driven landmark discovery, omnidirectional topological extraction, and high-throughput geometric morphometrics across dragonfly wings.
 
@@ -156,7 +156,7 @@ This 6-specimen comparative gallery demonstrates the robustness of the geometric
 A comprehensive 4-quadrant anatomical decomposition of specimen `#100` (*Stillwater Clubtail Forewing*):
 - **Panel A (Top-Left)**: Convex Hull & MEC overlay ($A_{\text{hull}} = 54,646\text{ px}^2$, $A_{\text{mec}} = 214,102\text{ px}^2$, compactness $= 0.255$, circularity $= 0.519$, 826 junctions).
 - **Panel B (Top-Right)**: Biological Cell Area Choropleth Heatmap (436 enclosed compartments, total cell area $= 25,506\text{ px}^2$, covering $46.7\%$ of the hull area, with a median cell area of $40.0\text{ px}^2$).
-- **Panel C (Bottom-Left)**: Microscopic Cell Boundary & Circle Inscription Zoom-In. Highlights individual cell areas, polygon side counts (dominance of 4- and 5-sided cells), and maximum inscribed circles (mean radius: $2.93\text{ px}$).
+- **Panel C (Bottom-Left)**: Microscopic Cell Boundary & Circle Inscription Zoom-In. Highlights polygon side counts (dominance of 4- and 5-sided cells) and maximum inscribed circles (mean radius: $2.93\text{ px}$).
 - **Panel D (Bottom-Right)**: Delaunay Network Triangulation & Circumcircle Voids (1,609 triangular facets, mean facet area $= 34.0\text{ px}^2$, Clark-Evans index $R = 1.209$).
 
 ---

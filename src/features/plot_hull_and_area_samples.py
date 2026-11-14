@@ -460,19 +460,6 @@ def plot_biological_cells_and_areas(
         )
         ax_c.add_patch(mec_c)
 
-        # Area and side text label at centroid
-        ax_c.text(
-            c["centroid"][0],
-            c["centroid"][1],
-            f"A={c['area']}\n{c['sides']}s",
-            color="#ffffff",
-            fontsize=7,
-            fontweight="bold",
-            ha="center",
-            va="center",
-            bbox=dict(boxstyle="round,pad=0.15", facecolor="#111111", edgecolor="none", alpha=0.7),
-        )
-
     ax_c.set_xlim(x1, x2)
     ax_c.set_ylim(y2, y1)
     ax_c.set_title(
@@ -928,11 +915,10 @@ def plot_master_showcase(
         ax_zoom.add_patch(Polygon(c["polygon"], closed=True, edgecolor="#ffffff", facecolor="#00e5ff", alpha=0.35, linewidth=1.4))
         ax_zoom.add_patch(Circle(c["inscribe_center"], c["inscribe_radius"], edgecolor="#0055ff", facecolor="none", lw=1.2))
         ax_zoom.add_patch(Circle(c["mec_center"], c["mec_radius"], edgecolor="#ff6600", facecolor="none", linestyle="--", lw=1.2))
-        ax_zoom.text(c["centroid"][0], c["centroid"][1], f"A={c['area']}\n{c['sides']}s", color="#ffffff", fontsize=7, fontweight="bold", ha="center", va="center", bbox=dict(boxstyle="round,pad=0.15", facecolor="#111111", alpha=0.7))
 
     ax_zoom.set_xlim(zx1, zx2)
     ax_zoom.set_ylim(zy2, zy1)
-    ax_zoom.set_title("D. Microscopic Cell Geometric Inscription & Areas", fontsize=11, fontweight="bold")
+    ax_zoom.set_title("D. Microscopic Cell Geometric Inscription & Morphology", fontsize=11, fontweight="bold")
     ax_zoom.set_xlabel("X (px)", fontsize=8)
     ax_zoom.set_ylabel("Y (px)", fontsize=8)
 
@@ -985,6 +971,7 @@ def plot_single_wing_showcase(
     seeds_dir: Path,
     csv_path: Path,
     output_path: Path,
+    include_callouts: bool = True,
 ):
     """
     Generates a dedicated, publication-grade 4-panel specimen showcase:
@@ -1221,23 +1208,29 @@ def plot_single_wing_showcase(
             ax_c.add_patch(Polygon(c["polygon"], closed=True, edgecolor="#ffffff", facecolor="#00e5ff", alpha=0.35, linewidth=1.4))
             ax_c.add_patch(Circle(c["inscribe_center"], c["inscribe_radius"], edgecolor="#0055ff", facecolor="none", lw=1.3, label="Inscribed Circle" if c == zcells[0] else ""))
             ax_c.add_patch(Circle(c["mec_center"], c["mec_radius"], edgecolor="#ff6600", facecolor="none", linestyle="--", lw=1.3, label="Cell MEC" if c == zcells[0] else ""))
-            ax_c.text(
-                c["centroid"][0],
-                c["centroid"][1],
-                f"A={c['area']}\n{c['sides']}s",
-                color="#ffffff",
-                fontsize=7.5,
-                fontweight="bold",
-                ha="center",
-                va="center",
-                bbox=dict(boxstyle="round,pad=0.18", facecolor="#111111", alpha=0.72),
-            )
+            if include_callouts:
+                ax_c.text(
+                    c["centroid"][0],
+                    c["centroid"][1],
+                    f"A={c['area']}\n{c['sides']}s",
+                    color="#ffffff",
+                    fontsize=7.5,
+                    fontweight="bold",
+                    ha="center",
+                    va="center",
+                    bbox=dict(boxstyle="round,pad=0.18", facecolor="#111111", alpha=0.72),
+                )
 
         ax_c.set_xlim(zx1, zx2)
         ax_c.set_ylim(zy2, zy1)
         ax_c.legend(loc="upper right", fontsize=8, framealpha=0.85)
 
-    ax_c.set_title("C. Microscopic Cell Polygon Inscription & Area Callouts", fontsize=12, fontweight="bold", pad=6)
+    c_title = (
+        "C. Microscopic Cell Polygon Inscription & Area Callouts"
+        if include_callouts
+        else "C. Microscopic Cell Polygon Inscription & Geometry"
+    )
+    ax_c.set_title(c_title, fontsize=12, fontweight="bold", pad=6)
     ax_c.set_xlabel("X (pixels)", fontsize=9)
     ax_c.set_ylabel("Y (pixels)", fontsize=9)
 
@@ -1376,6 +1369,7 @@ def main():
         seeds_dir=args.seeds_dir,
         csv_path=args.csv_path,
         output_path=args.output_dir / "06_single_wing_showcase_100_stillwater_clubtail_forewing.png",
+        include_callouts=False,
     )
 
     print("Generating Figure 7: Single-Wing Deep-Dive Showcase (Hyacinth Glider Hindwing)...")
@@ -1385,6 +1379,7 @@ def main():
         seeds_dir=args.seeds_dir,
         csv_path=args.csv_path,
         output_path=args.output_dir / "07_single_wing_showcase_385_hyacinth_glider_hindwing.png",
+        include_callouts=True,
     )
 
     print("\nAll morphometric and hull visualization figures generated successfully!")

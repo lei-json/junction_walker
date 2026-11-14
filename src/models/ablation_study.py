@@ -7,7 +7,7 @@ on failed wings and representative control wings:
 
 Environment 1: Evaluation Metric Calibration (Resolution-Scaled Tolerance = 8.0 px)
 Environment 2: Adaptive Top-Hat Preprocessing (Ridge threshold = 6 for faint wings)
-Environment 3: Data Curation & Manifest Compliance (Filter filigree marbled pigment per tasks.txt)
+Environment 3: Data Curation & Manifest Compliance (Filter filigree marbled pigment per curation protocol)
 Environment 4: Post-Processing Peak Filtering (Degree-2 vein peak suppression & tau=0.35)
 Combined: Holistic pipeline integrating all non-conflicting enhancements.
 """
@@ -175,7 +175,7 @@ def run_ablation(
             p_env2, r_env2, f1_env2 = p_base, r_base, f1_base
 
         # Environment 3: Data Curation & Manifest Compliance
-        # Filigree Skimmer has heavy marbled 2D filigree pigment; non-compliant per tasks.txt rule
+        # Filigree Skimmer has heavy marbled 2D filigree pigment; non-compliant per curation protocol
         is_filigree = "filigree_skimmer" in stem or "pseudoleon" in stem
         env3_status = "EXCLUDED" if is_filigree else "COMPLIANT"
 
@@ -293,7 +293,7 @@ def main():
         )
         f.write("1. **Env 1 (Metric Calibration)**: Resolution-scaled tolerance ($8.0\\text{ px}$) addressing thick-vein centroid shifts.\n")
         f.write("2. **Env 2 (Adaptive Preprocessing)**: Ridge threshold $= 6$ in Top-Hat extraction recovering faint crossveins.\n")
-        f.write("3. **Env 3 (Data Curation)**: Enforcing tasks.txt constraint (*'without large colored spots'*) on filigree pigmentation.\n")
+        f.write("3. **Env 3 (Data Curation)**: Enforcing curation constraint (*'without large colored spots'*) on filigree pigmentation.\n")
         f.write("4. **Env 4 (Peak Post-Processing)**: Degree-2 unbranched skeleton peak suppression and confidence calibration ($\\tau = 0.35$).\n")
         f.write("5. **Combined**: Integrated pipeline executing all non-conflicting enhancements.\n\n")
 

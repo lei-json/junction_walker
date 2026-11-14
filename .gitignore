@@ -1,8 +1,13 @@
 # ============================================================
-# Large data files
+# Sensitive / prompt files
 # ============================================================
 
-*.csv
+tasks.txt
+
+# ============================================================
+# Large model weights & binary data
+# ============================================================
+
 *.pkl
 *.h5
 *.pth
@@ -18,18 +23,31 @@
 datasets/
 raw_data/
 processed_data/
-src/models/training_output
-src/models/prediction_output
-training_output/
-prediction_output/
+src/models/training_output/
+src/models/prediction_output/
 
-# Project data directory
-data/
+# Project data directory (ignore raw/heavy image collections)
+data/cleaned_wings/
+data/cleaned_seeds/
+data/raw/
+data/rotate/
+data/unet_predictions/
 deprecated/data/
 deprecated/src/models/training_output/
 
-# Allow a tiny sample file if desired
+# Allow manifest and morphometric feature matrices
+!data/cleaned_wings_manifest.csv
+!data/wing_features.csv
 !data/sample.csv
+
+# Output directory exclusions (keep plots and reports, ignore checkpoints)
+training_output/*
+!training_output/plots/
+!training_output/ablation_study_chart.png
+!training_output/ablation_study_report.md
+!training_output/cleaned_wings_evaluation.csv
+!training_output/training_history.csv
+!training_output/ablation_study_results.csv
 
 # ============================================================
 # Python generated files

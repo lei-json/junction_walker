@@ -1,11 +1,11 @@
 # OdonataNet: Dragonfly Wing Venation Dataset & Topological Phenotyping Pipeline
 
-[![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](file:///home/jasonlei/Desktop/swain/junction_walker/pyproject.toml)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.6.0-EE4C2C.svg)](file:///home/jasonlei/Desktop/swain/junction_walker/requirements.txt)
-[![Dataset](https://img.shields.io/badge/Dataset-443%20Cleaned%20Wings-green.svg)](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings)
-[![Accuracy](https://img.shields.io/badge/Mean%20F1%20Accuracy-98.86%25-brightgreen.svg)](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/cleaned_wings_evaluation.csv)
-[![Passing Rate](https://img.shields.io/badge/Threshold%20Pass%20(%E2%89%A585%25)-100%25-success.svg)](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/cleaned_wings_evaluation.csv)
-[![Morphometrics](https://img.shields.io/badge/Features%20Extracted-104%20Metrics-blueviolet.svg)](file:///home/jasonlei/Desktop/swain/junction_walker/data/wing_features.csv)
+[![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](pyproject.toml)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.6.0-EE4C2C.svg)](requirements.txt)
+[![Dataset](https://img.shields.io/badge/Dataset-443%20Cleaned%20Wings-green.svg)](data/cleaned_wings)
+[![Accuracy](https://img.shields.io/badge/Mean%20F1%20Accuracy-98.86%25-brightgreen.svg)](training_output/cleaned_wings_evaluation.csv)
+[![Passing Rate](https://img.shields.io/badge/Threshold%20Pass%20(%E2%89%A585%25)-100%25-success.svg)](training_output/cleaned_wings_evaluation.csv)
+[![Morphometrics](https://img.shields.io/badge/Features%20Extracted-104%20Metrics-blueviolet.svg)](data/wing_features.csv)
 
 ---
 
@@ -16,11 +16,11 @@ Insect wings—and odonate (dragonfly and damselfly) wings in particular—repre
 The junction nodes of this venation network—where structural longitudinal veins intersect delicate transverse crossveins—determine the wing's localized flexibility, stress dissipation, and fracture resistance. Accurately mapping and quantifying these junctions at scale has historically been bottlenecked by manual landmarking or brittle classical edge detectors that fail when encountering pigmented wing spots, body remnants, variable illumination, and intricate vein reticulations.
 
 **OdonataNet** is an end-to-end computer vision and computational morphometrics framework and benchmark dataset developed to overcome these challenges. The project delivers:
-1. **The Curated Dragonfly Wing Dataset**: A benchmark corpus of **443 high-resolution cleaned dragonfly wings** (224 forewings and 219 hindwings across diverse families including *Gomphidae*, *Libellulidae*, *Aeshnidae*, *Petaluridae*, *Macromiidae*, and *Cordulegastridae*), accompanied by a 509-specimen curation manifest ([cleaned_wings_manifest.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings_manifest.csv)).
-2. **Deep Residual Keypoint Architecture (`JunctionUNet`)**: A custom fully convolutional neural network with residual bottleneck blocks ([model.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/models/model.py)) capable of detecting thousands of vein junctions per wing in under 200 milliseconds.
-3. **Omnidirectional Topological Ground Truth Engine (`TopologicalWalker`)**: A graph-theoretic skeleton crawler ([topological_walker.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/walkers/topological_walker.py)) operating on Morphological Black Top-Hat filtered vein networks, providing rigorous landmark ground truth free from directional bias or drift.
-4. **Comprehensive Morphometrics Feature Matrix**: 104 quantitative geometric, topological, and spatial point pattern features per wing ([wing_features.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/wing_features.csv)), spanning whole-wing convex hulls, Minimum Enclosing Circles (MEC), Clark-Evans spatial dispersion, Delaunay circumcircle distributions, and individual biological cell polygonal geometry.
-5. **Full Evaluation & Ablation Suite**: Empirical evaluation confirming **100.0% of wings exceed the target $\ge 85\%$ F1 threshold** (mean F1: **98.86%**, count correlation: $r = 0.9867$) and an isolated 4-environment ablation study ([ablation_study_report.md](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/ablation_study_report.md)).
+1. **The Curated Dragonfly Wing Dataset**: A benchmark corpus of **443 high-resolution cleaned dragonfly wings** (224 forewings and 219 hindwings across diverse families including *Gomphidae*, *Libellulidae*, *Aeshnidae*, *Petaluridae*, *Macromiidae*, and *Cordulegastridae*), accompanied by a 509-specimen curation manifest ([cleaned_wings_manifest.csv](data/cleaned_wings_manifest.csv)).
+2. **Deep Residual Keypoint Architecture (`JunctionUNet`)**: A custom fully convolutional neural network with residual bottleneck blocks ([model.py](src/models/model.py)) capable of detecting thousands of vein junctions per wing in under 200 milliseconds.
+3. **Omnidirectional Topological Ground Truth Engine (`TopologicalWalker`)**: A graph-theoretic skeleton crawler ([topological_walker.py](src/walkers/topological_walker.py)) operating on Morphological Black Top-Hat filtered vein networks, providing rigorous landmark ground truth free from directional bias or drift.
+4. **Comprehensive Morphometrics Feature Matrix**: 104 quantitative geometric, topological, and spatial point pattern features per wing ([wing_features.csv](data/wing_features.csv)), spanning whole-wing convex hulls, Minimum Enclosing Circles (MEC), Clark-Evans spatial dispersion, Delaunay circumcircle distributions, and individual biological cell polygonal geometry.
+5. **Full Evaluation & Ablation Suite**: Empirical evaluation confirming **100.0% of wings exceed the target $\ge 85\%$ F1 threshold** (mean F1: **98.86%**, count correlation: $r = 0.9867$) and an isolated 4-environment ablation study ([ablation_study_report.md](training_output/ablation_study_report.md)).
 
 ---
 
@@ -32,11 +32,11 @@ OdonataNet provides an end-to-end computational framework and curated benchmark 
 
 | Deliverable | Path | Description |
 |---|---|---|
-| **Cleaned Wings Dataset** | [`data/cleaned_wings/`](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings) | 443 normalized, rotated, body-cleaned grayscale dragonfly wing specimens. |
-| **Topological Ground Truth Seeds** | [`data/cleaned_seeds/`](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_seeds) | Ground-truth junction coordinate lists generated via omnidirectional skeleton topology. |
-| **Model Predictions & Coordinates** | [`data/unet_predictions/`](file:///home/jasonlei/Desktop/swain/junction_walker/data/unet_predictions) | 444 NumPy coordinate arrays (`.npy`) storing exact $(y, x)$ detected junction coordinates. |
-| **Visual Overlay Inspection Gallery** | [`prediction_output/`](file:///home/jasonlei/Desktop/swain/junction_walker/prediction_output) | 444 full-resolution composite overlays displaying predicted junctions over raw wing images. |
-| **104-Column Morphometric Matrix** | [`data/wing_features.csv`](file:///home/jasonlei/Desktop/swain/junction_walker/data/wing_features.csv) | Tabular feature matrix detailing global geometry, cell polygonal shapes, and point distributions. |
+| **Cleaned Wings Dataset** | [`data/cleaned_wings/`](data/cleaned_wings) | 443 normalized, rotated, body-cleaned grayscale dragonfly wing specimens. |
+| **Topological Ground Truth Seeds** | [`data/cleaned_seeds/`](data/cleaned_seeds) | Ground-truth junction coordinate lists generated via omnidirectional skeleton topology. |
+| **Model Predictions & Coordinates** | [`data/unet_predictions/`](data/unet_predictions) | 444 NumPy coordinate arrays (`.npy`) storing exact $(y, x)$ detected junction coordinates. |
+| **Visual Overlay Inspection Gallery** | [`prediction_output/`](prediction_output) | 444 full-resolution composite overlays displaying predicted junctions over raw wing images. |
+| **104-Column Morphometric Matrix** | [`data/wing_features.csv`](data/wing_features.csv) | Tabular feature matrix detailing global geometry, cell polygonal shapes, and point distributions. |
 
 ```
 junction_walker/
@@ -78,7 +78,7 @@ junction_walker/
 All figures below are generated directly from the dataset using the repository's visualization pipelines.
 
 ### 3.1 Comprehensive Performance Dashboard
-*Generated by [plot_evaluation_metrics.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/models/plot_evaluation_metrics.py) into [comprehensive_performance_dashboard.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/comprehensive_performance_dashboard.png).*
+*Generated by [plot_evaluation_metrics.py](src/models/plot_evaluation_metrics.py) into [comprehensive_performance_dashboard.png](training_output/plots/comprehensive_performance_dashboard.png).*
 
 ![Comprehensive Performance Dashboard](training_output/plots/comprehensive_performance_dashboard.png)
 
@@ -91,24 +91,27 @@ This 4-panel dashboard illustrates:
 ---
 
 ### 3.2 Visual Prediction Gallery & Ground Truth Comparison
-*Generated by [plot_evaluation_metrics.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/models/plot_evaluation_metrics.py) into [visual_prediction_gallery.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/visual_prediction_gallery.png).*
+*Generated by [plot_evaluation_metrics.py](src/models/plot_evaluation_metrics.py) into [visual_prediction_gallery.png](training_output/plots/visual_prediction_gallery.png).*
 
 ![Visual Prediction Gallery](training_output/plots/visual_prediction_gallery.png)
 
 A comparison across representative specimens:
 - Blue circles denote ground truth topological vertices; orange points represent `JunctionUNet` detections.
 - High zoomed-in fidelity is observed across high-density marginal cells, longitudinal trunk bifurcations, and oblique crossveins.
-- Per-wing composite renderings for all 444 specimens are available in [`prediction_output/`](file:///home/jasonlei/Desktop/swain/junction_walker/prediction_output), such as:
-  - [100_stillwater_clubtail_forewing_prediction.png](file:///home/jasonlei/Desktop/swain/junction_walker/prediction_output/100_stillwater_clubtail_forewing_prediction.png) (F1: 99.80%)
-  - [140_cobra_clubtail_forewing_prediction.png](file:///home/jasonlei/Desktop/swain/junction_walker/prediction_output/140_cobra_clubtail_forewing_prediction.png) (F1: 99.42%)
-  - [145_dragonhunter_forewing_prediction.png](file:///home/jasonlei/Desktop/swain/junction_walker/prediction_output/145_dragonhunter_forewing_prediction.png) (F1: 99.79%)
-  - [212_bronzed_river_cruiser_forewing_prediction.png](file:///home/jasonlei/Desktop/swain/junction_walker/prediction_output/212_bronzed_river_cruiser_forewing_prediction.png) (F1: 99.77%)
-  - [385_hyacinth_glider_hindwing_prediction.png](file:///home/jasonlei/Desktop/swain/junction_walker/prediction_output/385_hyacinth_glider_hindwing_prediction.png) (F1: 99.55%)
+- Per-wing composite renderings for all 444 specimens are available in [`prediction_output/`](prediction_output), such as:
+  - [100_stillwater_clubtail_forewing_prediction.png](prediction_output/100_stillwater_clubtail_forewing_prediction.png) (F1: 99.80%)
+  - [140_cobra_clubtail_forewing_prediction.png](prediction_output/140_cobra_clubtail_forewing_prediction.png) (F1: 99.42%)
+  - [145_dragonhunter_forewing_prediction.png](prediction_output/145_dragonhunter_forewing_prediction.png) (F1: 99.79%)
+  - [212_bronzed_river_cruiser_forewing_prediction.png](prediction_output/212_bronzed_river_cruiser_forewing_prediction.png) (F1: 99.77%)
+  - [385_hyacinth_glider_hindwing_prediction.png](prediction_output/385_hyacinth_glider_hindwing_prediction.png) (F1: 99.55%)
+
+#### Representative Single-Specimen Prediction Overlay: Stillwater Clubtail Forewing
+![Stillwater Clubtail Forewing Prediction Overlay](prediction_output/100_stillwater_clubtail_forewing_prediction.png)
 
 ---
 
 ### 3.3 Wing Morphometrics, Convex Hulls & Area Analysis Showcase
-*Generated by [plot_hull_and_area_samples.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/features/plot_hull_and_area_samples.py) into [`training_output/plots/morphometrics/`](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics).*
+*Generated by [plot_hull_and_area_samples.py](src/features/plot_hull_and_area_samples.py) into [`training_output/plots/morphometrics/`](training_output/plots/morphometrics).*
 
 The high-throughput landmark extraction enables rigorous multi-scale geometric and topological phenotyping across the dragonfly wing blade. By mapping detected junction vertices and closed vein boundaries into mathematical objects, the pipeline computes 104 quantitative morphometrics detailing:
 - **Global Blade Envelope**: Whole-wing outer boundary polygons, Convex Hull Area ($A_{\text{hull}}$), Perimeter ($P_{\text{hull}}$), Circularity ($4\pi A / P^2$), Centroid location, and Minimum Enclosing Circle (MEC radius $R_{\text{mec}}$ and Area $A_{\text{mec}}$).
@@ -119,7 +122,7 @@ The high-throughput landmark extraction enables rigorous multi-scale geometric a
 ---
 
 #### 3.3.1 Multi-Specimen Convex Hull & Minimum Enclosing Circle (MEC) Showcase
-*Generated into [01_sample_wings_convex_hulls_and_mec.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics/01_sample_wings_convex_hulls_and_mec.png).*
+*Generated into [01_sample_wings_convex_hulls_and_mec.png](training_output/plots/morphometrics/01_sample_wings_convex_hulls_and_mec.png).*
 
 ![Sample Wings Convex Hulls and MEC Overlays](training_output/plots/morphometrics/01_sample_wings_convex_hulls_and_mec.png)
 
@@ -146,7 +149,7 @@ This 6-specimen comparative gallery demonstrates the robustness of the geometric
 ---
 
 #### 3.3.2 Forewing High-Resolution Deep Dive: Stillwater Clubtail (*Gomphus amnicola*)
-*Generated into [06_single_wing_showcase_100_stillwater_clubtail_forewing.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics/06_single_wing_showcase_100_stillwater_clubtail_forewing.png).*
+*Generated into [06_single_wing_showcase_100_stillwater_clubtail_forewing.png](training_output/plots/morphometrics/06_single_wing_showcase_100_stillwater_clubtail_forewing.png).*
 
 ![Single-Wing Deep Dive: Stillwater Clubtail Forewing](training_output/plots/morphometrics/06_single_wing_showcase_100_stillwater_clubtail_forewing.png)
 
@@ -159,7 +162,7 @@ A comprehensive 4-quadrant anatomical decomposition of specimen `#100` (*Stillwa
 ---
 
 #### 3.3.3 Hindwing High-Resolution Deep Dive: Hyacinth Glider (*Miathyria marcella*)
-*Generated into [07_single_wing_showcase_385_hyacinth_glider_hindwing.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics/07_single_wing_showcase_385_hyacinth_glider_hindwing.png).*
+*Generated into [07_single_wing_showcase_385_hyacinth_glider_hindwing.png](training_output/plots/morphometrics/07_single_wing_showcase_385_hyacinth_glider_hindwing.png).*
 
 ![Single-Wing Deep Dive: Hyacinth Glider Hindwing](training_output/plots/morphometrics/07_single_wing_showcase_385_hyacinth_glider_hindwing.png)
 
@@ -171,7 +174,7 @@ A high-resolution decomposition of specimen `#385` (*Hyacinth Glider Hindwing*),
 ---
 
 #### 3.3.4 Biological Cell Compartment Segmentation & Area Heatmaps
-*Generated into [02_biological_cells_and_area_heatmaps.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics/02_biological_cells_and_area_heatmaps.png).*
+*Generated into [02_biological_cells_and_area_heatmaps.png](training_output/plots/morphometrics/02_biological_cells_and_area_heatmaps.png).*
 
 ![Biological Cells and Area Heatmaps](training_output/plots/morphometrics/02_biological_cells_and_area_heatmaps.png)
 
@@ -184,7 +187,7 @@ A detailed 4-panel visual breakdown of microscopic cell architecture:
 ---
 
 #### 3.3.5 Delaunay Triangulation & Circumcircle Void Analysis
-*Generated into [03_delaunay_triangulation_and_empty_circles.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics/03_delaunay_triangulation_and_empty_circles.png).*
+*Generated into [03_delaunay_triangulation_and_empty_circles.png](training_output/plots/morphometrics/03_delaunay_triangulation_and_empty_circles.png).*
 
 ![Delaunay Triangulation and Empty Circles](training_output/plots/morphometrics/03_delaunay_triangulation_and_empty_circles.png)
 
@@ -194,7 +197,7 @@ A detailed 4-panel visual breakdown of microscopic cell architecture:
 ---
 
 #### 3.3.6 Master Morphometrics & Topological Verification Dashboard
-*Generated into [05_master_hulls_and_areas_showcase.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics/05_master_hulls_and_areas_showcase.png).*
+*Generated into [05_master_hulls_and_areas_showcase.png](training_output/plots/morphometrics/05_master_hulls_and_areas_showcase.png).*
 
 ![Master Morphometrics Showcase](training_output/plots/morphometrics/05_master_hulls_and_areas_showcase.png)
 
@@ -206,7 +209,7 @@ A master synthesis combining:
 ---
 
 #### 3.3.7 Dataset-Wide Area Scaling Laws & Morphometrics Validation
-*Generated into [04_dataset_areas_and_morphometrics_validation.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/plots/morphometrics/04_dataset_areas_and_morphometrics_validation.png).*
+*Generated into [04_dataset_areas_and_morphometrics_validation.png](training_output/plots/morphometrics/04_dataset_areas_and_morphometrics_validation.png).*
 
 ![Dataset Areas and Morphometrics Validation](training_output/plots/morphometrics/04_dataset_areas_and_morphometrics_validation.png)
 
@@ -221,7 +224,7 @@ Empirical validation of biomechanical scaling laws across all 443 wings in the b
 ## 4. Key Findings & Quantitative Benchmarks
 
 ### 4.1 Evaluation Against Topological Ground Truth
-As mandated in [`tasks.txt`](file:///home/jasonlei/Desktop/swain/junction_walker/tasks.txt), the deep learning model was evaluated against omnidirectional topological ground truth across every cleaned wing:
+As established in the benchmark evaluation protocol, the deep learning model was evaluated against omnidirectional topological ground truth across every cleaned wing:
 
 $$\text{Accuracy Criterion: } \text{F1 Score} \ge 85.0\% \quad (\tau = 8.0\text{ px matching dense venation resolution})$$
 
@@ -236,12 +239,12 @@ $$\text{Accuracy Criterion: } \text{F1 Score} \ge 85.0\% \quad (\tau = 8.0\text{
 | **Count Correlation ($r$)** | **0.9867** ($R^2 = 0.9736$) | — | — | — | — |
 | **Inference Time / Wing** | **0.185 sec** | 0.174 sec | 0.082 sec | 0.412 sec | $\pm 0.048$ sec |
 
-The complete record for every specimen is archived in [cleaned_wings_evaluation.csv](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/cleaned_wings_evaluation.csv).
+The complete record for every specimen is archived in [cleaned_wings_evaluation.csv](training_output/cleaned_wings_evaluation.csv).
 
 ---
 
 ### 4.2 Ablation Study: Failure Mode Diagnosis & Resolution
-During early iterations, several specimens exhibited accuracy dips below 85%. A systematic ablation study was conducted across four candidate failure environments to diagnose root causes and establish remediation protocols (detailed in [ablation_study_report.md](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/ablation_study_report.md) and [ablation_study_chart.png](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/ablation_study_chart.png)):
+During early iterations, several specimens exhibited accuracy dips below 85%. A systematic ablation study was conducted across four candidate failure environments to diagnose root causes and establish remediation protocols (detailed in [ablation_study_report.md](training_output/ablation_study_report.md) and [ablation_study_chart.png](training_output/ablation_study_chart.png)):
 
 ![Ablation Study Chart](training_output/ablation_study_chart.png)
 
@@ -256,7 +259,7 @@ During early iterations, several specimens exhibited accuracy dips below 85%. A 
 3. **Failure Mode 3: Pigmented Membrane Patches (Filigree Patterns)**
    - *Symptom*: `371_filigree_skimmer_forewing` scored 79.60% F1.
    - *Root Cause*: Intricate brown marbled pigmentation on the wing membrane produced false positive vein responses.
-   - *Remediation (Env 3)*: Enforcing the `tasks.txt` constraint (*"without large colored spots"*) by flagging and isolating mottled specimens in the manifest ([cleaned_wings_manifest.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings_manifest.csv)).
+   - *Remediation (Env 3)*: Enforcing the dataset curation constraint (*"without large colored spots"*) by flagging and isolating mottled specimens in the manifest ([cleaned_wings_manifest.csv](data/cleaned_wings_manifest.csv)).
 4. **Failure Mode 4: Unbranched Skeleton Spurs**
    - *Symptom*: Classical skeletonization can produce degree-1 and degree-2 micro-spurs along curved vein margins.
    - *Remediation (Env 4)*: Degree-2 unbranched skeleton suppression and probability peak calibration ($\tau = 0.40$) improved control and edge cases by +3–6% F1.
@@ -267,7 +270,7 @@ During early iterations, several specimens exhibited accuracy dips below 85%. A 
 
 ### 4.3 Biological & Topological Insights
 
-Analysis of the 104-column feature matrix ([wing_features.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/wing_features.csv)) across 443 wings revealed distinct mathematical and structural regularities:
+Analysis of the 104-column feature matrix ([wing_features.csv](data/wing_features.csv)) across 443 wings revealed distinct mathematical and structural regularities:
 
 1. **Topological Junction Valence (Optimal Shear Trusses)**:
    - **Degree-3 Bifurcations**: **99.62%** of all junctions (mean: 928 per wing).
@@ -290,12 +293,12 @@ Analysis of the 104-column feature matrix ([wing_features.csv](file:///home/jaso
 
 ## 5. Dataset Structure & Feature Schema
 
-### 5.1 Curation Manifest ([cleaned_wings_manifest.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings_manifest.csv))
+### 5.1 Curation Manifest ([cleaned_wings_manifest.csv](data/cleaned_wings_manifest.csv))
 Tracks the filtering status of all 509 inspected specimens:
 - `included` (**443 wings**): Fully cleaned wings with pristine venation networks.
 - `excluded_colored_spots` (**66 wings**): Excluded due to heavy membrane infill, dark nodal spots, or broad marbled pigmentation violating the non-spotted constraint.
 
-### 5.2 Morphometric Features ([wing_features.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/wing_features.csv))
+### 5.2 Morphometric Features ([wing_features.csv](data/wing_features.csv))
 Contains 104 engineered metrics organized into 6 analytical domains:
 
 ```mermaid
@@ -361,23 +364,23 @@ flowchart TD
     Feat --> Matrix["wing_features.csv (104 Columns)"]
 ```
 
-### Step 1: Specimen Cleaning & Top-Hat Extraction ([cleaning.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/preprocessing/cleaning.py))
+### Step 1: Specimen Cleaning & Top-Hat Extraction ([cleaning.py](src/preprocessing/cleaning.py))
 - **Wing Root Whitening**: Dense thoracic, head, and leg tissues adhering to the wing base (left root margin) are segmented via connected-component area thresholds ($\ge 800\text{ px}$) and whitened to prevent spurious junction detection.
 - **Morphological Black Top-Hat Filtering**: Using an ellipse structuring element ($k = 11$), narrow 1D vein ridges ($\le 7\text{ px}$) are extracted while broad 2D regions (pterostigma, pigmentation, and background gradients) are filtered out:
   $$\text{TopHat}(I) = (I \bullet B) - I$$
 
-### Step 2: Omnidirectional Topological Ground Truth ([topological_walker.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/walkers/topological_walker.py))
+### Step 2: Omnidirectional Topological Ground Truth ([topological_walker.py](src/walkers/topological_walker.py))
 - Morphological skeletonization reduces veins to 1-pixel medians.
 - The 8-neighborhood crossing number ($\chi$) is computed at every skeleton pixel $P$:
   $$\chi(P) = \frac{1}{2} \sum_{i=1}^{8} |P_{i+1} - P_i|$$
 - Pixels with $\chi(P) \ge 3$ form junction candidates. Connected components are clustered to centroids, and open boundary spurs shorter than 3 pixels are pruned.
 
-### Step 3: Neural Network Architecture ([model.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/models/model.py))
+### Step 3: Neural Network Architecture ([model.py](src/models/model.py))
 - **Backbone**: Encoder-decoder U-Net with residual convolutional blocks (`ResBlock`) preserving high-frequency spatial gradients.
 - **Output Head**: $1\times 1$ convolution predicting continuous junction heatmaps with an output bias initialized to $-2.19$ (sigmoid $\approx 0.10$) to account for extreme spatial keypoint sparsity.
 - **Inference**: Local peak extraction with degree-2 unbranched suppression and adaptive thresholding ($\tau = 0.40$).
 
-### Step 4: Morphometric Feature Extraction ([extract_wing_features.py](file:///home/jasonlei/Desktop/swain/junction_walker/src/features/extract_wing_features.py))
+### Step 4: Morphometric Feature Extraction ([extract_wing_features.py](src/features/extract_wing_features.py))
 - Inverts the binary vein mask to segment enclosed biological cells.
 - Evaluates individual polygon contours, fitting Minimum Enclosing Circles and maximum inscribed circles via distance transform.
 - Builds spatial KD-Trees to compute nearest neighbor distances and Delaunay empty circumcircles.
@@ -474,16 +477,15 @@ print(f"Detected {len(junction_coords)} junctions in {img_path}")
 ## 8. Key Reference Files
 
 - **Core Dataset & Manifest**:
-  - Cleaned Wings Directory: [`data/cleaned_wings/`](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings)
-  - Curation Manifest: [cleaned_wings_manifest.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings_manifest.csv)
-  - Morphometric Features: [wing_features.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/wing_features.csv)
-  - Full Evaluation Results: [cleaned_wings_evaluation.csv](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/cleaned_wings_evaluation.csv)
+  - Cleaned Wings Directory: [`data/cleaned_wings/`](data/cleaned_wings)
+  - Curation Manifest: [cleaned_wings_manifest.csv](data/cleaned_wings_manifest.csv)
+  - Morphometric Features: [wing_features.csv](data/wing_features.csv)
+  - Full Evaluation Results: [cleaned_wings_evaluation.csv](training_output/cleaned_wings_evaluation.csv)
 - **Model Checkpoints & Weights**:
-  - Best Checkpoint: [best_model.pt](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/best_model.pt)
-  - Training History: [training_history.csv](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/training_history.csv)
+  - Best Checkpoint: [best_model.pt](training_output/best_model.pt)
+  - Training History: [training_history.csv](training_output/training_history.csv)
 - **Reports & Analysis**:
-  - Failure Mode Ablation Report: [ablation_study_report.md](file:///home/jasonlei/Desktop/swain/junction_walker/training_output/ablation_study_report.md)
-  - Tasks Log: [tasks.txt](file:///home/jasonlei/Desktop/swain/junction_walker/tasks.txt)
+  - Failure Mode Ablation Report: [ablation_study_report.md](training_output/ablation_study_report.md)
 
 ---
 
@@ -493,7 +495,7 @@ print(f"Detected {len(junction_coords)} junctions in {img_path}")
 > Please review the following notices and disclaimers before utilizing the **OdonataNet** dataset, models, morphological feature tables, or pipeline scripts in scientific research, commercial settings, or publication workflows.
 
 ### 9.1 AI & Automated Methodology Disclaimer
-- **Algorithmic Annotations & Predictions**: Keypoint landmarks, seed files ([`data/cleaned_seeds/`](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_seeds)), and coordinate predictions ([`data/unet_predictions/`](file:///home/jasonlei/Desktop/swain/junction_walker/data/unet_predictions)) are generated primarily via algorithmic computer vision pipelines (`TopologicalWalker` morphological skeleton extraction) and deep learning models (`JunctionUNet`). While benchmarked to achieve high empirical agreement (mean F1: **98.86%**, count correlation: **$r = 0.9867$** across all 443 wings), automated outputs are subject to statistical variability and should not be assumed to possess 100% human-expert manual precision.
+- **Algorithmic Annotations & Predictions**: Keypoint landmarks, seed files ([`data/cleaned_seeds/`](data/cleaned_seeds)), and coordinate predictions ([`data/unet_predictions/`](data/unet_predictions)) are generated primarily via algorithmic computer vision pipelines (`TopologicalWalker` morphological skeleton extraction) and deep learning models (`JunctionUNet`). While benchmarked to achieve high empirical agreement (mean F1: **98.86%**, count correlation: **$r = 0.9867$** across all 443 wings), automated outputs are subject to statistical variability and should not be assumed to possess 100% human-expert manual precision.
 - **Potential Model Failure Modes**: Users should be mindful of known automated limitations in edge cases:
   - *Faint or Anti-aliased Crossveins*: Extreme low-contrast transverse veins may fall below detection thresholds, leading to occasional false negatives.
   - *Wing Margin and Pterostigma Boundaries*: Dense pigmentation at the pterostigma or along the costal/subcostal margin can trigger localized false positives without post-processing filtering.
@@ -501,10 +503,10 @@ print(f"Detected {len(junction_coords)} junctions in {img_path}")
 - **AI-Assisted Development**: Code, feature extractors, and documentation throughout this repository were authored and refactored with the assistance of automated and AI-driven development tools. Users are encouraged to inspect and validate functions against domain-specific requirements prior to deployment in safety-critical, bio-inspired engineering, or taxonomic research.
 
 ### 9.2 Biological, Morphological, & Taxonomic Disclaimers
-- **Taxonomic Classifications & Metadata**: Species names, sex annotations, and higher taxonomic groupings in [cleaned_wings_manifest.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/cleaned_wings_manifest.csv) reflect digitized specimen metadata and historical accession records from contributing museum collections and biological databases. Odonate phylogenetic systematics is subject to active revision; users conducting formal comparative phylogenetic analyses should independently verify current taxonomic status against authoritative biodiversity databases (e.g., World Odonata List, GBIF).
+- **Taxonomic Classifications & Metadata**: Species names, sex annotations, and higher taxonomic groupings in [cleaned_wings_manifest.csv](data/cleaned_wings_manifest.csv) reflect digitized specimen metadata and historical accession records from contributing museum collections and biological databases. Odonate phylogenetic systematics is subject to active revision; users conducting formal comparative phylogenetic analyses should independently verify current taxonomic status against authoritative biodiversity databases (e.g., World Odonata List, GBIF).
 - **Physical Specimen Condition**: Historical insect specimens in museum collections vary widely in physical preservation state. Individual wings may exhibit post-mortem shrinkage, mechanical tears, micro-cracks, folding, optical glare, uneven lighting, dust particles, or insect pinning remnants.
-- **Automated Body Removal & Wing Petiole Boundaries**: The preprocessing pipeline ([`cleaning.py`](file:///home/jasonlei/Desktop/swain/junction_walker/src/preprocessing/cleaning.py)) applies automated thresholding, morphological masking, and contour filtering to excise the dragonfly body (thorax, abdomen) and background debris. In certain specimens, proximal wing-base structures (e.g., axillary sclerites, membranule, humeral plate) may be slightly cropped or masked to isolate the primary blade. Researchers focusing specifically on wing hinge biomechanics should review original uncropped plates.
-- **Biological Cell Segmentations**: Morphometric features derived from cell polygons (e.g., cell area distributions, aspect ratios, circularities in [wing_features.csv](file:///home/jasonlei/Desktop/swain/junction_walker/data/wing_features.csv)) depend on closed vein contours. Any microscopic discontinuity or break in a transverse vein can cause two adjacent biological cells to be segmented as a single combined macro-cell, skewing maximum cell area metrics.
+- **Automated Body Removal & Wing Petiole Boundaries**: The preprocessing pipeline ([`cleaning.py`](src/preprocessing/cleaning.py)) applies automated thresholding, morphological masking, and contour filtering to excise the dragonfly body (thorax, abdomen) and background debris. In certain specimens, proximal wing-base structures (e.g., axillary sclerites, membranule, humeral plate) may be slightly cropped or masked to isolate the primary blade. Researchers focusing specifically on wing hinge biomechanics should review original uncropped plates.
+- **Biological Cell Segmentations**: Morphometric features derived from cell polygons (e.g., cell area distributions, aspect ratios, circularities in [wing_features.csv](data/wing_features.csv)) depend on closed vein contours. Any microscopic discontinuity or break in a transverse vein can cause two adjacent biological cells to be segmented as a single combined macro-cell, skewing maximum cell area metrics.
 
 ### 9.3 Intended Use & Research Scope
 - **Academic & Educational Purpose**: OdonataNet is intended as an open scientific benchmark and research platform for computational entomology, geometric morphometrics, pattern recognition, and comparative biomechanics.

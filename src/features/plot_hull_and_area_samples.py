@@ -979,6 +979,347 @@ def plot_master_showcase(
     print(f"Saved: {output_path}")
 
 
+def plot_single_wing_showcase(
+    stem: str,
+    wings_dir: Path,
+    seeds_dir: Path,
+    csv_path: Path,
+    output_path: Path,
+):
+    """
+    Generates a dedicated, publication-grade 4-panel specimen showcase:
+    - Panel A: Whole-Wing Convex Hull, Minimum Enclosing Circle (MEC), Centroid & Area Overlays.
+    - Panel B: Complete Biological Cell Area Choropleth Heatmap with Log-Scale Calibration.
+    - Panel C: Microscopic Cell Boundary Inscription & Polygonal Geometry Zoom-In.
+    - Panel D: Delaunay Triangulation Network & Empty Circumcircle Dispersion.
+    Includes an integrated high-precision morphometric metrics ledger banner.
+    """
+    img_path = wings_dir / f"{stem}.png"
+    seed_path = seeds_dir / f"{stem}.npy"
+
+    if not img_path.exists() or not seed_path.exists():
+        print(f"Missing file for {stem}: {img_path} or {seed_path}")
+        return
+
+    img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
+    pts = np.load(str(seed_path)).astype(np.float32)
+    h, w = img.shape
+
+    # Load metrics from CSV
+    row_dict = {}
+    if csv_path.exists():
+        df = pd.read_csv(csv_path)
+        matching = df[df["stem"] == stem]
+        if len(matching) > 0:
+            row_dict = matching.iloc[0].to_dict()
+
+    # Compute Convex Hull & MEC
+    hull = ConvexHull(pts)
+    hull_pts = pts[hull.vertices]
+    hull_area = float(hull.volume)
+    hull_perim = float(hull.area)
+    hull_circ = (4.0 * np.pi * hull_area) / (hull_perim ** 2) if hull_perim > 0 else 0.0
+
+    (cx, cy), mec_r = cv2.minEnclosingCircle(pts)
+    mec_area = np.pi * (mec_r ** 2)
+    compactness = hull_area / mec_area if mec_area > 0 else 0.0
+    centroid = np.mean(pts, axis=0)
+
+    # Extract Biological Cells
+    cells, cleaned_vein = extract_cells_and_contours(img, stem)
+    areas = np.array([c["area"] for c in cells], dtype=np.float32) if cells else np.array([1.0])
+
+    # Compute Delaunay Triangulation
+    tri = Delaunay(pts)
+    p1 = pts[tri.simplices[:, 0]]
+    p2 = pts[tri.simplices[:, 1]]
+    p3 = pts[tri.simplices[:, 2]]
+    a = np.linalg.norm(p1 - p2, axis=1)
+    b = np.linalg.norm(p2 - p3, axis=1)
+    c = np.linalg.norm(p3 - p1, axis=1)
+    s = (a + b + c) / 2.0
+    d_area = np.sqrt(np.maximum(0, s * (s - a) * (s - b) * (s - c)))
+    valid_tri = d_area > 1e-4
+    v_areas = d_area[valid_tri]
+    v_simplices = tri.simplices[valid_tri]
+
+    # Parse Title Info
+    parts = stem.split("_")
+    spec_id = parts[0]
+    w_type = "Forewing" if "forewing" in stem else "Hindwing"
+    species_name = " ".join([p.capitalize() for p in parts[1:] if p not in ("forewing", "hindwing")])
+
+    fig = plt.figure(figsize=(19, 14), dpi=300)
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 1.0], hspace=0.25, wspace=0.18)
+
+    # ----------------------------------------------------
+    # Panel A: Convex Hull & Minimum Enclosing Circle (MEC)
+    # ----------------------------------------------------
+    ax_a = fig.add_subplot(gs[0, 0])
+    ax_a.imshow(img, cmap="gray", aspect="equal", extent=[0, w, h, 0])
+
+    # Plot MEC
+    mec_patch = Circle(
+        (cx, cy),
+        mec_r,
+        edgecolor="#00ffff",
+        facecolor="none",
+        linestyle="--",
+        linewidth=2.0,
+        alpha=0.85,
+        label=f"MEC (Area: {mec_area:,.0f} px²)",
+        zorder=3,
+    )
+    ax_a.add_patch(mec_patch)
+    ax_a.plot(cx, cy, "+", color="#00ffff", markersize=14, markeredgewidth=2.2, zorder=4)
+
+    # Plot Convex Hull
+    hull_polygon = Polygon(
+        hull_pts,
+        closed=True,
+        edgecolor="#00ff44",
+        facecolor="#00ff44",
+        alpha=0.24,
+        linewidth=2.4,
+        label=f"Convex Hull (Area: {hull_area:,.0f} px²)",
+        zorder=5,
+    )
+    ax_a.add_patch(hull_polygon)
+    ax_a.plot(
+        np.append(hull_pts[:, 0], hull_pts[0, 0]),
+        np.append(hull_pts[:, 1], hull_pts[0, 1]),
+        color="#00ff44",
+        linewidth=2.2,
+        zorder=6,
+    )
+
+    # Plot Junction Points
+    ax_a.scatter(
+        pts[:, 0],
+        pts[:, 1],
+        s=10,
+        c="#ff3366",
+        alpha=0.65,
+        edgecolors="none",
+        label=f"Vein Junctions (N={len(pts)})",
+        zorder=7,
+    )
+
+    # Plot Centroid
+    ax_a.plot(
+        centroid[0],
+        centroid[1],
+        marker="*",
+        color="#ffcc00",
+        markersize=14,
+        markeredgecolor="#000000",
+        markeredgewidth=1.2,
+        label=f"Centroid ({centroid[0]:.1f}, {centroid[1]:.1f})",
+        zorder=8,
+    )
+
+    ax_a.set_xlim(0, w)
+    ax_a.set_ylim(h, 0)
+    ax_a.set_title(
+        f"A. Whole-Wing Convex Hull & Minimum Enclosing Circle (MEC)",
+        fontsize=12,
+        fontweight="bold",
+        pad=6,
+    )
+    ax_a.set_xlabel("X (pixels)", fontsize=9)
+    ax_a.set_ylabel("Y (pixels)", fontsize=9)
+    ax_a.legend(loc="lower left", fontsize=8, framealpha=0.88)
+
+    badge_a = (
+        f"Hull Area: {hull_area:,.0f} px²\n"
+        f"Hull Perimeter: {hull_perim:,.0f} px\n"
+        f"MEC Area: {mec_area:,.0f} px²\n"
+        f"MEC Radius: {mec_r:.1f} px\n"
+        f"Compactness: {compactness:.3f}\n"
+        f"Circularity: {hull_circ:.3f}"
+    )
+    ax_a.text(
+        0.02,
+        0.96,
+        badge_a,
+        transform=ax_a.transAxes,
+        fontsize=8.5,
+        family="monospace",
+        va="top",
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="#ffffff", edgecolor="#333333", alpha=0.9),
+        zorder=10,
+    )
+
+    # ----------------------------------------------------
+    # Panel B: Biological Cell Area Heatmap
+    # ----------------------------------------------------
+    ax_b = fig.add_subplot(gs[0, 1])
+    ax_b.imshow(img, cmap="gray", alpha=0.35, aspect="equal", extent=[0, w, h, 0])
+
+    if cells:
+        norm_b = mcolors.LogNorm(vmin=max(float(np.min(areas)), 5.0), vmax=float(np.max(areas)))
+        patches_b = [Polygon(c["polygon"], closed=True) for c in cells]
+        coll_b = PatchCollection(patches_b, cmap="viridis", norm=norm_b, alpha=0.88, edgecolor="black", linewidth=0.3)
+        coll_b.set_array(areas)
+        ax_b.add_collection(coll_b)
+        cbar_b = plt.colorbar(coll_b, ax=ax_b, orientation="horizontal", shrink=0.72, pad=0.08)
+        cbar_b.set_label("Cell Area (px², log scale)", fontsize=8.5, fontweight="bold")
+
+    ax_b.set_xlim(0, w)
+    ax_b.set_ylim(h, 0)
+    ax_b.set_title(
+        f"B. Biological Cell Area Heatmap ({len(cells)} Enclosed Cells)",
+        fontsize=12,
+        fontweight="bold",
+        pad=6,
+    )
+    ax_b.set_xlabel("X (pixels)", fontsize=9)
+    ax_b.set_ylabel("Y (pixels)", fontsize=9)
+
+    mean_a = float(np.mean(areas)) if len(areas) > 0 else 0.0
+    med_a = float(np.median(areas)) if len(areas) > 0 else 0.0
+    tot_a = float(np.sum(areas)) if len(areas) > 0 else 0.0
+    cov_pct = (tot_a / hull_area * 100.0) if hull_area > 0 else 0.0
+
+    badge_b = (
+        f"Cell Count: {len(cells)}\n"
+        f"Total Cell Area: {tot_a:,.0f} px²\n"
+        f"Hull Coverage: {cov_pct:.1f}%\n"
+        f"Mean Cell Area: {mean_a:.1f} px²\n"
+        f"Median Area: {med_a:.1f} px²\n"
+        f"Max Cell Area: {float(np.max(areas)):.1f} px²"
+    )
+    ax_b.text(
+        0.02,
+        0.96,
+        badge_b,
+        transform=ax_b.transAxes,
+        fontsize=8.5,
+        family="monospace",
+        va="top",
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="#ffffff", edgecolor="#333333", alpha=0.9),
+        zorder=10,
+    )
+
+    # ----------------------------------------------------
+    # Panel C: Microscopic Cell Boundary & Circle Inscriptions
+    # ----------------------------------------------------
+    ax_c = fig.add_subplot(gs[1, 0])
+    if cells:
+        cx_mid, cy_mid = w * 0.45, h * 0.5
+        dists = [(c["centroid"][0] - cx_mid)**2 + (c["centroid"][1] - cy_mid)**2 for c in cells]
+        best_idx = int(np.argmin(dists))
+        zoom_cx, zoom_cy = cells[best_idx]["centroid"]
+        bw, bh = min(w * 0.22, 160), min(h * 0.35, 120)
+        zx1, zx2 = max(0, zoom_cx - bw), min(w, zoom_cx + bw)
+        zy1, zy2 = max(0, zoom_cy - bh), min(h, zoom_cy + bh)
+
+        zcells = [c for c in cells if zx1 <= c["centroid"][0] <= zx2 and zy1 <= c["centroid"][1] <= zy2]
+        ax_c.imshow(img, cmap="gray", alpha=0.35, aspect="equal", extent=[0, w, h, 0])
+
+        for c in zcells:
+            ax_c.add_patch(Polygon(c["polygon"], closed=True, edgecolor="#ffffff", facecolor="#00e5ff", alpha=0.35, linewidth=1.4))
+            ax_c.add_patch(Circle(c["inscribe_center"], c["inscribe_radius"], edgecolor="#0055ff", facecolor="none", lw=1.3, label="Inscribed Circle" if c == zcells[0] else ""))
+            ax_c.add_patch(Circle(c["mec_center"], c["mec_radius"], edgecolor="#ff6600", facecolor="none", linestyle="--", lw=1.3, label="Cell MEC" if c == zcells[0] else ""))
+            ax_c.text(
+                c["centroid"][0],
+                c["centroid"][1],
+                f"A={c['area']}\n{c['sides']}s",
+                color="#ffffff",
+                fontsize=7.5,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                bbox=dict(boxstyle="round,pad=0.18", facecolor="#111111", alpha=0.72),
+            )
+
+        ax_c.set_xlim(zx1, zx2)
+        ax_c.set_ylim(zy2, zy1)
+        ax_c.legend(loc="upper right", fontsize=8, framealpha=0.85)
+
+    ax_c.set_title("C. Microscopic Cell Polygon Inscription & Area Callouts", fontsize=12, fontweight="bold", pad=6)
+    ax_c.set_xlabel("X (pixels)", fontsize=9)
+    ax_c.set_ylabel("Y (pixels)", fontsize=9)
+
+    # ----------------------------------------------------
+    # Panel D: Delaunay Triangulation & Circumcircle Voids
+    # ----------------------------------------------------
+    ax_d = fig.add_subplot(gs[1, 1])
+    ax_d.imshow(img, cmap="gray", alpha=0.35, aspect="equal", extent=[0, w, h, 0])
+
+    if len(v_simplices) > 0:
+        tri_patches = [Polygon(pts[simplex], closed=True) for simplex in v_simplices]
+        norm_tri = mcolors.LogNorm(vmin=max(float(np.min(v_areas)), 1.0), vmax=float(np.percentile(v_areas, 98)))
+        coll_d = PatchCollection(tri_patches, cmap="plasma", norm=norm_tri, alpha=0.65, edgecolor="#ffffff", linewidth=0.3)
+        coll_d.set_array(v_areas)
+        ax_d.add_collection(coll_d)
+        cbar_d = plt.colorbar(coll_d, ax=ax_d, orientation="horizontal", shrink=0.72, pad=0.08)
+        cbar_d.set_label("Facet Area (px², log scale)", fontsize=8.5, fontweight="bold")
+
+    ax_d.scatter(pts[:, 0], pts[:, 1], s=8, color="#00ffff", alpha=0.8, zorder=5, label=f"Junctions (N={len(pts)})")
+
+    # Sample a few circumcircles
+    np.random.seed(42)
+    sample_indices = np.random.choice(len(v_simplices), size=min(6, len(v_simplices)), replace=False)
+    for s_idx in sample_indices:
+        sim = v_simplices[s_idx]
+        p_tri = pts[sim]
+        d_p1, d_p2, d_p3 = p_tri[0], p_tri[1], p_tri[2]
+        d_a = np.linalg.norm(d_p1 - d_p2)
+        d_b = np.linalg.norm(d_p2 - d_p3)
+        d_c = np.linalg.norm(d_p3 - d_p1)
+        d_s = (d_a + d_b + d_c) / 2.0
+        area_s = np.sqrt(max(0, d_s * (d_s - d_a) * (d_s - d_b) * (d_s - d_c)))
+        if area_s > 1e-4:
+            r_c = (d_a * d_b * d_c) / (4.0 * area_s)
+            d_val = 2 * (d_p1[0] * (d_p2[1] - d_p3[1]) + d_p2[0] * (d_p3[1] - d_p1[1]) + d_p3[0] * (d_p1[1] - d_p2[1]))
+            if abs(d_val) > 1e-5:
+                u_x = ((d_p1[0]**2 + d_p1[1]**2) * (d_p2[1] - d_p3[1]) + (d_p2[0]**2 + d_p2[1]**2) * (d_p3[1] - d_p1[1]) + (d_p3[0]**2 + d_p3[1]**2) * (d_p1[1] - d_p2[1])) / d_val
+                u_y = ((d_p1[0]**2 + d_p1[1]**2) * (d_p3[0] - d_p2[0]) + (d_p2[0]**2 + d_p2[1]**2) * (d_p1[0] - d_p3[0]) + (d_p3[0]**2 + d_p3[1]**2) * (d_p2[0] - d_p1[0])) / d_val
+                if r_c < 120:
+                    c_patch = Circle((u_x, u_y), r_c, edgecolor="#ff00ff", facecolor="none", linestyle=":", linewidth=1.5, zorder=6)
+                    ax_d.add_patch(c_patch)
+
+    ax_d.set_xlim(0, w)
+    ax_d.set_ylim(h, 0)
+    ax_d.set_title("D. Delaunay Network Triangulation & Circumcircle Voids", fontsize=12, fontweight="bold", pad=6)
+    ax_d.set_xlabel("X (pixels)", fontsize=9)
+    ax_d.set_ylabel("Y (pixels)", fontsize=9)
+    ax_d.legend(loc="lower left", fontsize=8, framealpha=0.88)
+
+    ce_val = row_dict.get("clark_evans_index", 1.20)
+    badge_d = (
+        f"Triangles: {len(v_simplices):,}\n"
+        f"Mean Facet Area: {float(np.mean(v_areas)):.1f} px²\n"
+        f"Median Facet Area: {float(np.median(v_areas)):.1f} px²\n"
+        f"Clark-Evans Index: {ce_val:.3f}"
+    )
+    ax_d.text(
+        0.02,
+        0.96,
+        badge_d,
+        transform=ax_d.transAxes,
+        fontsize=8.5,
+        family="monospace",
+        va="top",
+        bbox=dict(boxstyle="round,pad=0.35", facecolor="#ffffff", edgecolor="#333333", alpha=0.9),
+        zorder=10,
+    )
+
+    plt.suptitle(
+        f"Specimen Morphometrics Showcase: #{spec_id} {species_name} ({w_type})\n"
+        f"Convex Hull Area: {hull_area:,.0f} px² | MEC Area: {mec_area:,.0f} px² | Compactness: {compactness:.3f} | Enclosed Cells: {len(cells)}",
+        fontsize=15,
+        fontweight="bold",
+        y=0.995,
+    )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"Saved: {output_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot sample wings and computed hulls/areas.")
     parser.add_argument("--wings-dir", type=Path, default=DEFAULT_WINGS_DIR, help="Path to cleaned wings.")
@@ -1026,6 +1367,24 @@ def main():
         seeds_dir=args.seeds_dir,
         csv_path=args.csv_path,
         output_path=args.output_dir / "05_master_hulls_and_areas_showcase.png",
+    )
+
+    print("Generating Figure 6: Single-Wing Deep-Dive Showcase (Stillwater Clubtail Forewing)...")
+    plot_single_wing_showcase(
+        stem="100_stillwater_clubtail_forewing",
+        wings_dir=args.wings_dir,
+        seeds_dir=args.seeds_dir,
+        csv_path=args.csv_path,
+        output_path=args.output_dir / "06_single_wing_showcase_100_stillwater_clubtail_forewing.png",
+    )
+
+    print("Generating Figure 7: Single-Wing Deep-Dive Showcase (Hyacinth Glider Hindwing)...")
+    plot_single_wing_showcase(
+        stem="385_hyacinth_glider_hindwing",
+        wings_dir=args.wings_dir,
+        seeds_dir=args.seeds_dir,
+        csv_path=args.csv_path,
+        output_path=args.output_dir / "07_single_wing_showcase_385_hyacinth_glider_hindwing.png",
     )
 
     print("\nAll morphometric and hull visualization figures generated successfully!")

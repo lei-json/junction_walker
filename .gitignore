@@ -25,6 +25,8 @@ prediction_output/
 
 # Project data directory
 data/
+deprecated/data/
+deprecated/src/models/training_output/
 
 # Allow a tiny sample file if desired
 !data/sample.csv

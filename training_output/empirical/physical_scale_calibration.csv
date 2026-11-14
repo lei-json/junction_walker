@@ -1,0 +1,16 @@
+stem,species_common,scientific_name,family,ref_fw_length_mm,span_px,resolution_px_per_mm,resolution_um_per_px,raw_hull_area_px2,calib_hull_area_mm2,calib_cell_area_mean_mm2
+145_dragonhunter_forewing,dragonhunter,Hagenius brevistylus,Gomphidae,55.0,926.0,16.84,59.4,147996,522.1,0.3439
+140_cobra_clubtail_forewing,cobra_clubtail,Gomphurus vastus,Gomphidae,33.5,1596.0,47.64,20.99,483409,212.98,0.2912
+100_stillwater_clubtail_forewing,stillwater_clubtail,Arigomphus lentulus,Gomphidae,36.5,521.0,14.27,70.06,54646,268.21,0.2871
+139_columbia_clubtail_forewing,columbia_clubtail,Gomphurus lynnae,Gomphidae,35.0,838.0,23.94,41.77,138843,242.2,0.3479
+142_splendid_clubtail_forewing,splendid_clubtail,Gomphurus externus,Gomphidae,37.0,1727.0,46.68,21.42,564083,258.92,0.387
+141_blackwater_clubtail_forewing,blackwater_clubtail,Gomphus dilatatus,Gomphidae,38.0,1539.0,40.5,24.69,462728,282.11,0.2944
+212_bronzed_river_cruiser_forewing,bronzed_river_cruiser,Macromia taeniolata,Macromiidae,52.0,673.0,12.94,77.27,85746,511.91,0.7658
+149_common_sanddragon_forewing,common_sanddragon,Progomphus obscurus,Gomphidae,34.0,878.0,25.82,38.72,138424,207.58,0.2014
+55_green_striped_darner_forewing,green_striped_darner,Aeshna verticalis,Aeshnidae,47.0,656.0,13.96,71.65,85510,438.94,0.2977
+70_blue_eyed_darner_forewing,blue_eyed_darner,Rhionaeschna multicolor,Aeshnidae,48.0,576.0,12.0,83.33,73413,509.81,0.4042
+56_lake_darner_forewing,lake_darner,Aeshna eremita,Aeshnidae,51.0,1241.0,24.33,41.1,302915,511.59,0.3464
+30_gray_petaltail_forewing,gray_petaltail,Tachopteryx thoreyi,Petaluridae,52.0,332.0,6.38,156.63,21073,516.97,0.2971
+361_blue_dasher_forewing,blue_dasher,Pachydiplax longipennis,Libellulidae,28.0,493.0,17.61,56.8,47262,152.45,0.1963
+335_boreal_whiteface_forewing,boreal_whiteface,Leucorrhinia borealis,Libellulidae,26.5,1826.0,68.91,14.51,696136,146.62,0.1975
+372_evening_skimmer_forewing,evening_skimmer,Pseudoleon superbus,Libellulidae,44.0,1176.0,26.73,37.41,273267,382.54,0.3746

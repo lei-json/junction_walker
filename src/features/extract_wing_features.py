@@ -233,7 +233,7 @@ def featurize_single_wing(args_tuple: Tuple[str, Path, Path, Path]) -> Optional[
     # ========================================================
     # 5. Topological Vein Skeleton & Crossing Number Branch Degrees
     # ========================================================
-    ridge_th = 6 if "caribbean_darner" in stem else 10
+    ridge_th = 10
     bw_top, _ = extract_veins_tophat(
         img, kernel_size=9, ridge_threshold=ridge_th, background_threshold=250
     )

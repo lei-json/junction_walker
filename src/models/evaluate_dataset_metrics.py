@@ -82,7 +82,7 @@ def evaluate_all(
 
         # UNet inference with degree-2 vein peak filtering and adaptive sensitivity
         t0 = time.perf_counter()
-        ridge_th = 6 if "caribbean_darner" in stem else 10
+        ridge_th = 10  # Uniform ridge threshold without specimen-specific tuning
         prob_map, unet_peaks = predict_image(
             model,
             img,

@@ -93,8 +93,7 @@ def process_single_wing(args_tuple):
 
     # Step 2: Extract veins via Morphological Black Top-Hat
     # Preserves fine 1D vein ridges even when faint or anti-aliased (<= 250)
-    # Uses adaptive ridge threshold (threshold=6) for wings with faint crossvenation
-    ridge_threshold = 6 if "caribbean_darner" in stem else 10
+    ridge_threshold = 10
     bw_top, _ = extract_veins_tophat(
         gray,
         kernel_size=9,

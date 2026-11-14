@@ -1,0 +1,40 @@
+{
+  "train": {
+    "count": 308,
+    "mean_precision": 99.09306366506326,
+    "mean_recall": 98.2761368104456,
+    "mean_f1": 98.65559400204398,
+    "median_f1": 99.3268529337792,
+    "pass_85_pct": 99.67532467532467,
+    "mean_count_error": 59.69155844155844
+  },
+  "val": {
+    "count": 66,
+    "mean_precision": 99.5112675092853,
+    "mean_recall": 99.23564527388402,
+    "mean_f1": 99.37204323245493,
+    "median_f1": 99.53333034534369,
+    "pass_85_pct": 100.0,
+    "mean_count_error": 48.40909090909091
+  },
+  "held_out_test_specimen": {
+    "count": 69,
+    "mean_precision": 99.21377307020003,
+    "mean_recall": 98.83927540399185,
+    "mean_f1": 99.02070829364156,
+    "median_f1": 99.4715573515698,
+    "pass_85_pct": 100.0,
+    "mean_count_error": 51.333333333333336
+  },
+  "unseen_taxa_test": {
+    "count": 88,
+    "mean_precision": 99.09546921292302,
+    "mean_recall": 99.24894481019439,
+    "mean_f1": 99.16515450077945,
+    "median_f1": 99.70372010226,
+    "pass_85_pct": 100.0,
+    "mean_count_error": 70.77272727272727
+  },
+  "generalization_gap_specimen_pct": -0.37,
+  "generalization_gap_taxa_pct": -0.51
+}

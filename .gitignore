@@ -3,6 +3,7 @@
 # ============================================================
 
 tasks.txt
+weaknesses.txt
 
 # ============================================================
 # Large model weights & binary data
@@ -32,6 +33,9 @@ data/cleaned_seeds/
 data/raw/
 data/rotate/
 data/unet_predictions/
+data/external/
+data/realistic_synthetic_wings/
+data/synthetic_voronoi/
 deprecated/data/
 deprecated/src/models/training_output/
 
@@ -43,6 +47,10 @@ deprecated/src/models/training_output/
 # Output directory exclusions (keep plots and reports, ignore checkpoints)
 training_output/*
 !training_output/plots/
+!training_output/empirical/
+!training_output/empirical/**
+!training_output/baselines_benchmark.csv
+!training_output/generalized_metrics.csv
 !training_output/ablation_study_chart.png
 !training_output/ablation_study_report.md
 !training_output/cleaned_wings_evaluation.csv

@@ -1,0 +1,101 @@
+{
+  "dimensionless_invariants": [
+    [
+      "aspect_ratio",
+      "Span-to-chord aspect ratio (W / H)"
+    ],
+    [
+      "hull_circularity",
+      "Isoperimetric circularity quotient (4*pi*A / P^2)"
+    ],
+    [
+      "wing_compactness_mec",
+      "Enclosure compactness ratio (A_hull / A_mec)"
+    ],
+    [
+      "clark_evans_index",
+      "Clark-Evans spatial aggregation index (R)"
+    ],
+    [
+      "junction_degree3_ratio",
+      "Trivalent Y-junction proportion (N_3 / N_tot)"
+    ],
+    [
+      "junction_degree4_ratio",
+      "Quadrivalent X-junction proportion (N_4 / N_tot)"
+    ],
+    [
+      "cell_pct_3_sided",
+      "Triangular cell frequency (% 3-sided)"
+    ],
+    [
+      "cell_pct_4_sided",
+      "Quadrilateral cell frequency (% 4-sided)"
+    ],
+    [
+      "cell_pct_5_sided",
+      "Pentagonal cell frequency (% 5-sided)"
+    ],
+    [
+      "cell_pct_6_sided",
+      "Hexagonal cell frequency (% 6-sided)"
+    ],
+    [
+      "cell_pct_7plus_sided",
+      "Heptagonal+ cell frequency (% 7+-sided)"
+    ],
+    [
+      "cell_area_log_var",
+      "Log-transformed cell area variance (Var(ln A))"
+    ],
+    [
+      "cell_radius_ratio_mean",
+      "Mean cell elongation quotient (R_mec / r_inscribe)"
+    ]
+  ],
+  "scale_dependent_metrics": [
+    [
+      "hull_area",
+      "px\u00b2",
+      "Functional aerodynamic blade surface area"
+    ],
+    [
+      "hull_perimeter",
+      "px",
+      "Blade outer perimeter length"
+    ],
+    [
+      "mec_radius",
+      "px",
+      "Minimum Enclosing Circle radius"
+    ],
+    [
+      "mec_area",
+      "px\u00b2",
+      "Minimum Enclosing Circle area"
+    ],
+    [
+      "cell_area_mean",
+      "px\u00b2",
+      "Mean individual cell lumen area"
+    ],
+    [
+      "cell_perim_mean",
+      "px",
+      "Mean individual cell boundary perimeter"
+    ],
+    [
+      "vein_pixel_count",
+      "px",
+      "Total skeletonized vein network length"
+    ]
+  ],
+  "summary": {
+    "total_dimensionless_features": 13,
+    "total_scale_dependent_features": 7,
+    "resolution_range_px_per_mm": [
+      6.38,
+      68.91
+    ]
+  }
+}

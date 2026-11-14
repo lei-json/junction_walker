@@ -338,7 +338,7 @@ def main():
                 continue
 
             filter_deg2 = not args.no_filter_degree2
-            ridge_th = 6 if "caribbean_darner" in img_path.stem else 10
+            ridge_th = 10  # Uniform ridge threshold without specimen-specific tuning
             prob_map, pred_peaks = predict_image(
                 model, img, device, threshold=args.threshold, filter_degree2=filter_deg2, ridge_threshold=ridge_th
             )

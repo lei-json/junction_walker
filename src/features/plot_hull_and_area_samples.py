@@ -56,7 +56,7 @@ SAMPLE_STEMS = [
 def extract_cells_and_contours(img: np.ndarray, stem: str):
     """Extract interior biological cell polygons, areas, contours, and inscribed/circumscribed circles."""
     h, w = img.shape
-    ridge_th = 6 if "caribbean_darner" in stem else 10
+    ridge_th = 10
     bw_top, _ = extract_veins_tophat(img, kernel_size=9, ridge_threshold=ridge_th, background_threshold=250)
     vein_mask = (bw_top == 0).astype(np.uint8)
 

@@ -164,7 +164,7 @@ This 4-panel dashboard illustrates comparative performance across 69 held-out te
 
 ![Unified Benchmark Performance Comparison](training_output/empirical/plots/unified_benchmark_performance_comparison.png)
 
-- **Panel 1 (Visual Overlays across 5 Domains)**: Qualitative detections across Abstract Geometric Voronoi, Realistic Synthetic Dragonfly, Real Photographic Dragonfly Wing (PNAS 2018), Clinical Retinal Vasculature (DRIVE), and Botanical Leaf Venation (HALVS). True positives ($\tau \le 5.0\text{ px}$) are marked in cyan; false positives in red.
+- **Panel 1 (Visual Overlays across 5 Domains)**: Qualitative detections across Abstract Geometric Voronoi, Realistic Synthetic Dragonfly, Real Photographic Dragonfly Wing (PNAS 2018), Clinical Retinal Vasculature (DRIVE), and Botanical Leaf Venation (HALVS). True positives ($\tau \le 5.0\text{ px}$) are marked in royal blue; false positives in red.
 - **Panel 2 (Comparative Performance & Noise Curves)**: Bar comparison across all 7 benchmark conditions and dual noise robustness curves demonstrating graceful performance retention on clean networks and constant $O(1)$ latency.
 
 ---

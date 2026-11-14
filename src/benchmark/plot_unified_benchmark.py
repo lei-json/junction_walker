@@ -70,7 +70,7 @@ def plot_visual_4panel_comparison(
     s_gt = synth_gt[s_valid] - np.array([300, 100], dtype=np.float32)
 
     # 3. PNAS Real Dragonfly
-    p_crop, p_gt, _ = load_pnas_dragonfly_benchmark(crop_box=(450, 650, 1100, 1400))
+    p_crop, p_gt, _ = load_pnas_dragonfly_benchmark(crop_box=(300, 500, 2200, 2500))
 
     # 4. DRIVE Retina
     d_full, d_gt, _ = load_drive_retina_benchmark(index=1)
@@ -119,9 +119,11 @@ def plot_visual_4panel_comparison(
         # Column 1: Ground Truth Overlay
         axes[row_idx, 1].imshow(img, cmap="gray")
         if len(gt) > 0:
-            axes[row_idx, 1].scatter(gt[:, 0], gt[:, 1], c="#00FF66", s=22, edgecolors="black", linewidths=0.5, label="Ground Truth")
+            axes[row_idx, 1].scatter(gt[:, 0], gt[:, 1], c="#00E676", s=28, edgecolors="black", linewidths=0.7, label="Ground Truth")
         axes[row_idx, 1].set_title(f"Ground Truth Junctions\n(N = {len(gt)})", fontsize=11, fontweight="bold")
         axes[row_idx, 1].axis("off")
+        if row_idx == 0:
+            axes[row_idx, 1].legend(loc="lower right", fontsize=8.5, framealpha=0.85)
 
         # Column 2: UNet Prediction Overlay
         axes[row_idx, 2].imshow(img, cmap="gray")
@@ -129,12 +131,14 @@ def plot_visual_4panel_comparison(
             tp_pts = preds[tp_pred]
             fp_pts = preds[~tp_pred]
             if len(tp_pts) > 0:
-                axes[row_idx, 2].scatter(tp_pts[:, 0], tp_pts[:, 1], c="#00E5FF", s=24, marker="o", edgecolors="black", linewidths=0.5, label="True Positive (<=5px)")
+                axes[row_idx, 2].scatter(tp_pts[:, 0], tp_pts[:, 1], c="#0055FF", s=30, marker="o", edgecolors="black", linewidths=0.8, label="True Positive (<=5px)")
             if len(fp_pts) > 0:
-                axes[row_idx, 2].scatter(fp_pts[:, 0], fp_pts[:, 1], c="#FF1744", s=18, marker="x", linewidths=1.0, label="False Positive")
+                axes[row_idx, 2].scatter(fp_pts[:, 0], fp_pts[:, 1], c="#FF1744", s=26, marker="x", linewidths=1.3, label="False Positive")
 
         axes[row_idx, 2].set_title(f"JunctionUNet Detection\nF1@5px = {f1*100:.1f}% | P = {p*100:.1f}%, R = {r*100:.1f}%", fontsize=11, fontweight="bold")
         axes[row_idx, 2].axis("off")
+        if row_idx == 0:
+            axes[row_idx, 2].legend(loc="lower right", fontsize=8.5, framealpha=0.85)
 
     plt.tight_layout()
     plt.savefig(out_file, dpi=300, bbox_inches="tight")

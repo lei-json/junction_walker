@@ -96,6 +96,7 @@ def plot_baselines_dashboard(csv_path: Path):
     ax.axhline(1.0, color="gray", linestyle="--", linewidth=1.2, label="1.0 px Sub-Pixel Threshold")
     ax.set_ylabel("Mean Euclidean Error (pixels)")
     ax.set_title("(C) Spatial Localization Accuracy on True Positive Junctions")
+    ax.set_xticks(range(len(methods)))
     ax.set_xticklabels(methods, rotation=25, ha="right")
     ax.legend(loc="upper right")
     for bar in bars:
@@ -110,6 +111,7 @@ def plot_baselines_dashboard(csv_path: Path):
     ax.set_ylabel("Latency per Wing (ms, Log Scale)")
     ax.set_yscale("log")
     ax.set_title("(D) Computational Efficiency & Throughput")
+    ax.set_xticks(range(len(methods)))
     ax.set_xticklabels(methods, rotation=25, ha="right")
     for i, lat in enumerate(latencies):
         ax.annotate(f"{lat:.1f} ms", xy=(i, lat), xytext=(0, 4),
@@ -229,7 +231,7 @@ def plot_biological_hypotheses(json_path: Path, features_csv: Path):
     ax = axes[1, 0]
     fore_comp = df[df["wing_type"] == "forewing"]["wing_compactness_mec"]
     hind_comp = df[df["wing_type"] == "hindwing"]["wing_compactness_mec"]
-    bp = ax.boxplot([fore_comp.dropna(), hind_comp.dropna()], labels=["Forewing", "Hindwing"],
+    bp = ax.boxplot([fore_comp.dropna(), hind_comp.dropna()], tick_labels=["Forewing", "Hindwing"],
                     patch_artist=True, widths=0.5)
     colors = ["#3288bd", "#d53e4f"]
     for patch, c in zip(bp["boxes"], colors):
@@ -254,7 +256,7 @@ def plot_biological_hypotheses(json_path: Path, features_csv: Path):
     fams = ["Gomphidae", "Aeshnidae", "Libellulidae", "Corduliidae"]
     fam_data = [df[df["fam"] == f]["aspect_ratio"].dropna() for f in fams]
 
-    bp2 = ax.boxplot(fam_data, labels=fams, patch_artist=True, widths=0.5)
+    bp2 = ax.boxplot(fam_data, tick_labels=fams, patch_artist=True, widths=0.5)
     fam_colors = ["#66c2a5", "#fc8d62", "#8da0cb", "#e78ac3"]
     for patch, c in zip(bp2["boxes"], fam_colors):
         patch.set_facecolor(c)
@@ -294,7 +296,8 @@ def plot_synthetic_benchmark(csv_path: Path):
     ax.set_title("Independent Analytical Benchmark: Robustness to Noise against Exact Mathematical Ground Truth")
     ax.set_xticks(noise_levels)
     ax.set_xticklabels([f"Clean (σ={n})" if n==2 else f"Noisy (σ={n})" for n in noise_levels])
-    ax.set_ylim(20, 102)
+    ax.set_ylim(0, 105)
+    ax.set_yticks(range(0, 101, 20))
     ax.legend(loc="lower left")
 
     plt.tight_layout()
@@ -331,7 +334,7 @@ def plot_pigmented_stress_test(csv_path: Path):
     # Panel B: False Positive Distribution Comparison
     ax = axes[1]
     bp = ax.boxplot([df["tw_pigment_fp_rate_pct"], df["unet_pigment_fp_rate_pct"]],
-                    labels=["TopologicalWalker", "JunctionUNet"], patch_artist=True, widths=0.45)
+                    tick_labels=["TopologicalWalker", "JunctionUNet"], patch_artist=True, widths=0.45)
     bp["boxes"][0].set_facecolor("#1f77b4")
     bp["boxes"][1].set_facecolor("#ff7f0e")
     for patch in bp["boxes"]:

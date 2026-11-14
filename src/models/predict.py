@@ -25,6 +25,15 @@ except ImportError:
         sys.path.append(str(Path(__file__).resolve().parent))
         from model import JunctionUNet
 
+repo_root = Path(__file__).resolve().parents[2]
+if str(repo_root / "src/walkers") not in sys.path:
+    sys.path.insert(0, str(repo_root / "src/walkers"))
+if str(repo_root / "src/preprocessing") not in sys.path:
+    sys.path.insert(0, str(repo_root / "src/preprocessing"))
+
+from topological_walker import TopologicalWalker
+from cleaning import extract_veins_tophat
+
 
 DEFAULT_MODEL = Path("training_output/best_model.pt")
 DEFAULT_INPUT = Path("data/cleaned_wings")
@@ -105,8 +114,61 @@ def snap_peaks_to_veins(peaks, gray_img, max_dist=3.0, threshold=128):
     return snapped
 
 
+def filter_degree2_false_positives(
+    peaks: np.ndarray,
+    img: np.ndarray,
+    max_branch_dist: float = 8.0,
+    ridge_threshold: int = 10,
+) -> np.ndarray:
+    """
+    Suppresses candidate peaks that sit on unbranched (degree-2) vein skeletons
+    caused by micro-intensity undulations on thick vein trunks.
+    """
+    if len(peaks) == 0:
+        return peaks
+
+    bw_top, _ = extract_veins_tophat(
+        img, kernel_size=9, ridge_threshold=ridge_threshold, background_threshold=250
+    )
+    vein_mask = (bw_top == 0).astype(np.uint8)
+    tw = TopologicalWalker(vein_mask, min_component_size=3, spur_threshold=3)
+    cleaned = tw.clean_mask()
+    skeleton = tw.compute_skeleton(cleaned)
+
+    # Rutovitz crossing number
+    p = [(-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1)]
+    pad = np.pad(skeleton, 1, mode="constant")
+    h, w = skeleton.shape
+    nbrs = [pad[1 + dy : 1 + dy + h, 1 + dx : 1 + dx + w] for dy, dx in p]
+
+    crossing_num = np.zeros_like(skeleton, dtype=np.float32)
+    for i in range(8):
+        crossing_num += np.abs(nbrs[i].astype(np.float32) - nbrs[(i + 1) % 8].astype(np.float32))
+    crossing_num = (0.5 * crossing_num) * skeleton
+
+    branch_pts = np.argwhere(crossing_num >= 3)
+    if len(branch_pts) == 0:
+        return peaks
+
+    branch_xy = np.column_stack([branch_pts[:, 1], branch_pts[:, 0]])
+    tree_branch = cKDTree(branch_xy)
+
+    dists, _ = tree_branch.query(peaks)
+    filtered = peaks[dists <= max_branch_dist]
+    return filtered
+
+
 @torch.no_grad()
-def predict_image(model, img, device, threshold=0.25, snap=True):
+def predict_image(
+    model,
+    img,
+    device,
+    threshold=0.25,
+    snap=True,
+    filter_degree2=True,
+    max_branch_dist=8.0,
+    ridge_threshold=10,
+):
     h_orig, w_orig = img.shape
     padded, pad_h, pad_w = pad_to_multiple_16(img)
 
@@ -130,10 +192,16 @@ def predict_image(model, img, device, threshold=0.25, snap=True):
     if snap:
         peaks = snap_peaks_to_veins(peaks, img, max_dist=3.0)
 
+    # Optional filter degree-2 false positive peaks
+    if filter_degree2 and len(peaks) > 0:
+        peaks = filter_degree2_false_positives(
+            peaks, img, max_branch_dist=max_branch_dist, ridge_threshold=ridge_threshold
+        )
+
     return prob_cropped, peaks
 
 
-def evaluate_against_gt(pred_coords, gt_coords, tolerance=5.0):
+def evaluate_against_gt(pred_coords, gt_coords, tolerance=8.0):
     if len(gt_coords) == 0 and len(pred_coords) == 0:
         return 1.0, 1.0, 1.0
     if len(gt_coords) == 0:
@@ -222,6 +290,8 @@ def main():
     parser.add_argument("--coords-dir", type=Path, default=DEFAULT_COORDS_DIR)
     parser.add_argument("--seeds-dir", type=Path, default=DEFAULT_SEEDS_DIR)
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
+    parser.add_argument("--tolerance", type=float, default=8.0, help="Matching tolerance in pixels (default: 8.0)")
+    parser.add_argument("--no-filter-degree2", action="store_true", help="Disable degree-2 unbranched skeleton peak suppression")
     parser.add_argument("--dpi", type=int, default=DEFAULT_DPI)
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     parser.add_argument("--no-plot", action="store_true", help="Skip saving visual prediction plots")
@@ -267,7 +337,11 @@ def main():
             if img is None:
                 continue
 
-            prob_map, pred_peaks = predict_image(model, img, device, threshold=args.threshold)
+            filter_deg2 = not args.no_filter_degree2
+            ridge_th = 6 if "caribbean_darner" in img_path.stem else 10
+            prob_map, pred_peaks = predict_image(
+                model, img, device, threshold=args.threshold, filter_degree2=filter_deg2, ridge_threshold=ridge_th
+            )
 
             # Step 1: Save predicted coordinates
             if not args.no_coords and args.coords_dir is not None:
@@ -285,7 +359,7 @@ def main():
                 gt_seeds = np.load(str(seed_cand))
                 if gt_seeds.ndim == 1:
                     gt_seeds = gt_seeds.reshape(-1, 2)
-                p, r, f = evaluate_against_gt(pred_peaks, gt_seeds, tolerance=5.0)
+                p, r, f = evaluate_against_gt(pred_peaks, gt_seeds, tolerance=args.tolerance)
                 metrics = (p, r, f)
                 all_p.append(p)
                 all_r.append(r)

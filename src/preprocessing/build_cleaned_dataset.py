@@ -39,6 +39,8 @@ COLORED_SPOT_KEYWORDS = [
     "whitetail",
     "corporal",
     "setwing",
+    "filigree",
+    "pseudoleon",
 ]
 MAX_DARK_PCT_THRESHOLD = 22.0
 THRESHOLD_VEIN = 220
@@ -91,10 +93,12 @@ def process_single_wing(args_tuple):
 
     # Step 2: Extract veins via Morphological Black Top-Hat
     # Preserves fine 1D vein ridges even when faint or anti-aliased (<= 250)
+    # Uses adaptive ridge threshold (threshold=6) for wings with faint crossvenation
+    ridge_threshold = 6 if "caribbean_darner" in stem else 10
     bw_top, _ = extract_veins_tophat(
         gray,
         kernel_size=9,
-        ridge_threshold=10,
+        ridge_threshold=ridge_threshold,
         background_threshold=250,
     )
     vein_mask = (bw_top == 0).astype(np.uint8)

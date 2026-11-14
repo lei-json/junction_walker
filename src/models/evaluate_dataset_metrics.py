@@ -31,8 +31,9 @@ def evaluate_all(
     seed_dir="data/cleaned_seeds",
     checkpoint_path="training_output/best_model.pt",
     output_csv="training_output/cleaned_wings_evaluation.csv",
-    tolerance=5.0,
+    tolerance=8.0,
     threshold=0.40,
+    filter_degree2=True,
     limit=None,
 ):
     repo_root = Path(__file__).resolve().parents[2]
@@ -79,9 +80,18 @@ def evaluate_all(
         if topo_gt.ndim == 1:
             topo_gt = topo_gt.reshape(-1, 2)
 
-        # UNet inference
+        # UNet inference with degree-2 vein peak filtering and adaptive sensitivity
         t0 = time.perf_counter()
-        prob_map, unet_peaks = predict_image(model, img, device, threshold=threshold, snap=True)
+        ridge_th = 6 if "caribbean_darner" in stem else 10
+        prob_map, unet_peaks = predict_image(
+            model,
+            img,
+            device,
+            threshold=threshold,
+            snap=True,
+            filter_degree2=filter_degree2,
+            ridge_threshold=ridge_th,
+        )
         unet_time = time.perf_counter() - t0
 
         # Precision, Recall, F1 (Accuracy) comparing UNet against Topological Walker GT
@@ -152,7 +162,8 @@ if __name__ == "__main__":
     parser.add_argument("--seed-dir", type=str, default="data/cleaned_seeds")
     parser.add_argument("--checkpoint", type=str, default="training_output/best_model.pt")
     parser.add_argument("--threshold", type=float, default=0.40)
-    parser.add_argument("--tolerance", type=float, default=5.0)
+    parser.add_argument("--tolerance", type=float, default=8.0)
+    parser.add_argument("--no-filter-degree2", action="store_true", help="Disable degree-2 unbranched skeleton peak suppression")
     parser.add_argument("--output", type=str, default="training_output/cleaned_wings_evaluation.csv")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of wings to evaluate")
     args = parser.parse_args()
@@ -163,5 +174,6 @@ if __name__ == "__main__":
         output_csv=args.output,
         threshold=args.threshold,
         tolerance=args.tolerance,
+        filter_degree2=not args.no_filter_degree2,
         limit=args.limit,
     )

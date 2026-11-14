@@ -126,7 +126,7 @@ def generate_plots(metrics_csv=DEFAULT_METRICS_CSV, output_dir=DEFAULT_OUTPUT_DI
         color="#e41a1c", linewidth=2.0, label=f"Linear Fit ($R^2 = {r2:.4f}$, slope={slope:.3f})"
     )
 
-    ax.set_title("Correlation Between UNet and Topological Walker Junction Counts\n(All 444 Cleaned Wings)", fontsize=14, fontweight="bold", pad=12)
+    ax.set_title(f"Correlation Between UNet and Topological Walker Junction Counts\n({len(df)} Cleaned Wings)", fontsize=14, fontweight="bold", pad=12)
     ax.set_xlabel("Topological Walker Ground Truth Junction Count", fontsize=12, fontweight="bold")
     ax.set_ylabel("UNet Predicted Junction Count", fontsize=12, fontweight="bold")
     ax.set_xlim(0, max_val)
@@ -253,7 +253,7 @@ def generate_visual_showcase(output_dir=DEFAULT_OUTPUT_DIR):
 
         img = cv2.imread(str(img_p), cv2.IMREAD_GRAYSCALE)
         gt = np.load(str(seed_p))
-        prob_map, peaks = predict_image(model, img, device, threshold=0.48, snap=True)
+        prob_map, peaks = predict_image(model, img, device, threshold=0.40, snap=True, filter_degree2=True)
 
         # Panel 1: Full wing overlay
         axes[idx, 0].imshow(img, cmap="gray")
